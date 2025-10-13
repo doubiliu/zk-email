@@ -21,9 +21,10 @@ type RSA[T emulated.FieldParams] struct {
 }
 
 func (pub *PublicKey[T]) Size(api frontend.API) int {
-	bitsN := byte2bits(api, pub.N)
-	bitsLength := len(bitsN)
-	return (bitsLength + 7) / 8
+	/*	bitsN := byte2bits(api, pub.N)
+		bitsLength := len(bitsN)
+		return (bitsLength + 7) / 8*/
+	return (len(pub.N)*8 + 7) / 8
 }
 
 func (rsa *RSA[T]) VerifyPkcs1v15(publicKey *PublicKey[T], sign, hashed []frontend.Variable) error {
@@ -48,13 +49,8 @@ func (rsa *RSA[T]) encrypt(pub *PublicKey[T], plaintext []frontend.Variable) *em
 	}
 	bitsN := byte2bits(api, pub.N)
 	nelet := f.FromBits(bitsN...)
-	//nelet := f.FromBits(bits.ToBinary(api, pub.N)...)
 	eelet := f.FromBits(bits.ToBinary(api, pub.E)...)
 	bitsPtt := byte2bits(api, plaintext)
-	/*	temp := make([]frontend.Variable, 0)
-		for i := 0; i < len(plaintext); i++ {
-			temp = append(temp, bits.ToBinary(api, plaintext[i])...)
-		}*/
 	pelet := f.FromBits(bitsPtt...)
 	em := f.ModExp(pelet, nelet, eelet)
 	return em
@@ -91,7 +87,7 @@ func (rsa *RSA[T]) pkcs1v15ConstructEM(pub *PublicKey[T], hashed []frontend.Vari
 func byte2bits(api frontend.API, bytesData []frontend.Variable) []frontend.Variable {
 	bitsData := make([]frontend.Variable, 0)
 	for i := 0; i < len(bytesData); i++ {
-		bitsData = append(bitsData, bits.ToBinary(api, bytesData[i])...)
+		bitsData = append(bitsData, bits.ToBinary(api, bytesData[i], bits.WithNbDigits(8))...)
 	}
 	return bitsData
 }

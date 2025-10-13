@@ -50,16 +50,16 @@ func TestRSACircuit(t *testing.T) {
 		n_array[i] = Nbytes[i]
 	}
 
-	circuit := RSAWrapper[emparams.Mod1e4096]{
-		PublicKey: &PublicKey[emparams.Mod1e4096]{
+	circuit := RSAWrapper[emparams.Mod1e512]{
+		PublicKey: &PublicKey[emparams.Mod1e512]{
 			N: n_array,
 			E: frontend.Variable(structPubKey.E),
 		},
 		Sign:   sign_array,
 		Hashed: hash_array,
 	}
-	assignment := RSAWrapper[emparams.Mod1e4096]{
-		PublicKey: &PublicKey[emparams.Mod1e4096]{
+	assignment := RSAWrapper[emparams.Mod1e512]{
+		PublicKey: &PublicKey[emparams.Mod1e512]{
 			N: n_array,
 			E: frontend.Variable(structPubKey.E),
 		},
