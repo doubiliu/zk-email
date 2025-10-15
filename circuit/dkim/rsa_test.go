@@ -4,11 +4,13 @@ import (
 	"crypto"
 	"crypto/sha256"
 	"fmt"
+	"testing"
+
 	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark/frontend"
+	"github.com/consensys/gnark/std/math/emulated"
 	"github.com/consensys/gnark/std/math/emulated/emparams"
 	"github.com/consensys/gnark/test"
-	"testing"
 )
 
 func TestRSACircuit(t *testing.T) {
@@ -44,24 +46,19 @@ func TestRSACircuit(t *testing.T) {
 	for i := 0; i < len(hashSum); i++ {
 		hash_array[i] = hashSum[i]
 	}
-	Nbytes := structPubKey.N.Bytes()
-	n_array := make([]frontend.Variable, len(Nbytes))
-	for i := 0; i < len(n_array); i++ {
-		n_array[i] = Nbytes[i]
-	}
 
-	circuit := RSAWrapper[emparams.Mod1e512]{
-		PublicKey: &PublicKey[emparams.Mod1e512]{
-			N: n_array,
-			E: frontend.Variable(structPubKey.E),
+	circuit := RSAWrapper[emparams.Mod1e4096]{
+		PublicKey: &PublicKey[emparams.Mod1e4096]{
+			N: emulated.ValueOf[emparams.Mod1e4096](structPubKey.N),
+			E: emulated.ValueOf[emparams.Mod1e4096](structPubKey.E),
 		},
 		Sign:   sign_array,
 		Hashed: hash_array,
 	}
-	assignment := RSAWrapper[emparams.Mod1e512]{
-		PublicKey: &PublicKey[emparams.Mod1e512]{
-			N: n_array,
-			E: frontend.Variable(structPubKey.E),
+	assignment := RSAWrapper[emparams.Mod1e4096]{
+		PublicKey: &PublicKey[emparams.Mod1e4096]{
+			N: emulated.ValueOf[emparams.Mod1e4096](structPubKey.N),
+			E: emulated.ValueOf[emparams.Mod1e4096](structPubKey.E),
 		},
 		Sign:   sign_array,
 		Hashed: hash_array,

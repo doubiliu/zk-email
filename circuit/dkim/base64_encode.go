@@ -1,9 +1,10 @@
 package dkim
 
 import (
+	"slices"
+
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/std/lookup/logderivlookup"
-	"slices"
 )
 
 func NewBase64Encode(api frontend.API) Base64Encode {

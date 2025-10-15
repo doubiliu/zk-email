@@ -1,10 +1,11 @@
 package dkim
 
 import (
+	"testing"
+
 	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/test"
-	"testing"
 )
 
 func TestBase64EncodeCircuit(t *testing.T) {
