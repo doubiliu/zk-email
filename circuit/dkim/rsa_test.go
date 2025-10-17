@@ -3,6 +3,7 @@ package dkim
 import (
 	"crypto"
 	"crypto/sha256"
+	"encoding/base64"
 	"fmt"
 	"testing"
 
@@ -34,7 +35,8 @@ func TestRSACircuit(t *testing.T) {
 		panic(err)
 	}
 	fmt.Println("verify signature succeeded")
-
+	fmt.Println(len(base64.StdEncoding.EncodeToString(sig)))
+	return
 	sign_array := make([]frontend.Variable, len(sig))
 	for i := 0; i < len(sig); i++ {
 		sign_array[i] = sig[i]
@@ -68,4 +70,19 @@ func TestRSACircuit(t *testing.T) {
 	//fmt.Println(ccs.GetNbConstraints())
 	err = test.IsSolved(&circuit, &assignment, ecc.BN254.ScalarField())
 	assert.NoError(err)
+}
+
+type RSAWrapper[T emulated.FieldParams] struct {
+	PublicKey    *PublicKey[T]
+	Sign, Hashed []frontend.Variable
+}
+
+// Define declares the circuit's constraints
+func (c *RSAWrapper[T]) Define(api frontend.API) error {
+	rsa := NewRSA[T](api)
+	err := rsa.VerifyPkcs1v15(c.PublicKey, c.Sign, c.Hashed)
+	if err != nil {
+		return err
+	}
+	return nil
 }

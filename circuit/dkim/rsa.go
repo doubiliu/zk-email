@@ -80,18 +80,3 @@ func byteToBits(api frontend.API, bytesData []frontend.Variable) []frontend.Vari
 	slices.Reverse(bitsData)
 	return bitsData
 }
-
-type RSAWrapper[T emulated.FieldParams] struct {
-	PublicKey    *PublicKey[T]
-	Sign, Hashed []frontend.Variable
-}
-
-// Define declares the circuit's constraints
-func (c *RSAWrapper[T]) Define(api frontend.API) error {
-	rsa := NewRSA[T](api)
-	err := rsa.VerifyPkcs1v15(c.PublicKey, c.Sign, c.Hashed)
-	if err != nil {
-		return err
-	}
-	return nil
-}
