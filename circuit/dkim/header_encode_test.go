@@ -9,48 +9,12 @@ import (
 	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/test"
-	"strings"
 	"testing"
 )
-
-func fixupNewlines(s string) string {
-	return strings.Replace(s, "\n", "\r\n", -1)
-}
-
-var headersOnly = fixupNewlines(`mime-version:1.0
-from:Jelle van den Hooff <jelle@vandenhooff.name>
-date:Sun, 29 Mar 2015 22:39:03 -0400
-message-id:<CAP=Jqubpoizbfg+Fb_+ycEkhqrgMBE=qozKrRubUuimQ717wKw@mail.gmail.com>
-subject:vnsy7km1hn4crbyp0h32m3932p38qtgbhpxf9mp01s6w40mvk2jg
-to:1v443yp1p8@keytree.io
-content-type:text/plain; charset=UTF-8
-dkim-signature:v=1; a=rsa-sha256; c=relaxed/relaxed; d=vandenhooff.name; s=google; h=mime-version:from:date:message-id:subject:to:content-type; bh=47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=; b=NCOUEepJZ6cdKYtq61hifQ9K0fimliTNcDVDBQ8C1OQToNxNGQuGifUxWQ/6odRnmm+TGraJoXyKu2WwVl2auHW6Hug/9QBWg6JIQrUl3TLK5Z07IZHpqBFrXjqV/fd6Yl/1+LZSaJ9lwo6YW6LvwoAq4AUwPDZqXeak7i5pj2U=`)
-
-var client = &fakeDnsClient{
-	results: map[string][]string{
-		"google._domainkey.vandenhooff.name.": []string{
-			`v=DKIM1; k=rsa; p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCl2Qrp5KF1uJnQSO0YuwInVPISQRrUciXtg/5hnQl6ed+UmYvWreLyuiyaiSd9X9Zu+aZQoeKm67HCxSMpC6G2ar0NludsXW69QdfzUpB5I6fzaLW8rl/RyeGkiQ3D66kvadK1wlNfUI7Dt9WtnUs8AFz/15xvODzgTMFJDiAcAwIDAQAB`,
-		},
-	},
-}
-
-type fakeDnsClient struct {
-	results map[string][]string
-}
-
-func (c *fakeDnsClient) LookupTxt(hostname string) ([]string, error) {
-	if result, found := c.results[hostname]; found {
-		return result, nil
-	} else {
-		return nil, errors.New("hostname not found")
-	}
-}
 
 func TestHeaderEncode_Encode(t *testing.T) {
 	assert := test.NewAssert(t)
 	email := algorithm.ParseEmail(headersOnly)
-	//headers := email.Headers()
-	//body := email.Body()
 	var signatureHeader string
 	for _, header := range email.Headers() {
 		// we don't support DKIM-Signature headers signing other DKIM-Signature
@@ -72,10 +36,10 @@ func TestHeaderEncode_Encode(t *testing.T) {
 	}
 
 	signedHeaders := algorithm.ExtractHeaders(email.Headers(), signature.HeaderNames())
-	/*	for _, ele := range signedHeaders {
+	for _, ele := range signedHeaders {
 		temp := signature.Canon().Header()(ele)
 		fmt.Println(temp)
-	}*/
+	}
 
 	h := signature.Algo().Hasher()()
 	for _, header := range signedHeaders {
@@ -83,7 +47,7 @@ func TestHeaderEncode_Encode(t *testing.T) {
 		h.Write([]byte(header))
 	}
 	header := signature.Canon().Header()(signature.TrimmedHeader())
-	fmt.Println(header)
+	fmt.Println("TrimmedHeader:" + header)
 	h.Write([]byte(header))
 	headersHash := h.Sum(nil)
 

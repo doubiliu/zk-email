@@ -73,8 +73,9 @@ func TestRSACircuit(t *testing.T) {
 }
 
 type RSAWrapper[T emulated.FieldParams] struct {
-	PublicKey    *PublicKey[T]
-	Sign, Hashed []frontend.Variable
+	PublicKey *PublicKey[T]
+	Sign      []frontend.Variable
+	Hashed    []frontend.Variable
 }
 
 // Define declares the circuit's constraints
