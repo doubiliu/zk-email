@@ -19,13 +19,12 @@ type FixEmailHeaderEncodeWrapper struct {
 
 func (c *FixEmailHeaderEncodeWrapper) Define(api frontend.API) error {
 	encode := NewFixEmailHeaderEncode(api)
-	expectHashInCircuit, err := encode.GetHeaderHash(c.Header, c.TrimmedHeader)
+	expectHash, err := encode.GetHeaderHash(c.Header, c.TrimmedHeader)
 	if err != nil {
 		return err
 	}
-	expectHash := c.Expect
-	for i, _ := range c.Expect {
-		api.AssertIsEqual(expectHashInCircuit[i], expectHash[i])
+	for i := range c.Expect {
+		api.AssertIsEqual(expectHash[i], c.Expect[i])
 	}
 	return nil
 }
@@ -101,13 +100,12 @@ type CustomEmailHeaderWrapper struct {
 
 func (c *CustomEmailHeaderWrapper) Define(api frontend.API) error {
 	encode := NewCustomEmailHeaderEncode(api)
-	expectHashInCircuit, err := encode.GetHeaderHash(c.Header, c.TrimmedHeader)
+	expectHash, err := encode.GetHeaderHash(c.Header, c.TrimmedHeader)
 	if err != nil {
 		return err
 	}
-	expectHash := c.Expect
-	for i, _ := range c.Expect {
-		api.AssertIsEqual(expectHashInCircuit[i], expectHash[i])
+	for i := range c.Expect {
+		api.AssertIsEqual(expectHash[i], c.Expect[i])
 	}
 	return nil
 }
@@ -144,18 +142,18 @@ func TestCustomEmailHeaderEncode(t *testing.T) {
 	mimeVersion := []byte(signature.Canon().Header()(signedHeaders[0]))
 	from := []byte(signature.Canon().Header()(signedHeaders[1]))
 	date := []byte(signature.Canon().Header()(signedHeaders[2]))
-	message_id := []byte(signature.Canon().Header()(signedHeaders[3]))
+	messageId := []byte(signature.Canon().Header()(signedHeaders[3]))
 	subject := []byte(signature.Canon().Header()(signedHeaders[4]))
 	to := []byte(signature.Canon().Header()(signedHeaders[5]))
-	content_type := []byte(signature.Canon().Header()(signedHeaders[6]))
+	contentType := []byte(signature.Canon().Header()(signedHeaders[6]))
 
 	predixData := mimeVersion
 	predixData = append(predixData, from...)
 	predixData = append(predixData, date...)
-	predixData = append(predixData, message_id...)
+	predixData = append(predixData, messageId...)
 	predixData = append(predixData, subject...)
 	specifyData := to
-	suffixData := content_type
+	suffixData := contentType
 
 	trimmedHeader := []byte(tHeader)
 

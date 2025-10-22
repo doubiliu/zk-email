@@ -37,7 +37,7 @@ func BitsToBytes(api frontend.API, bitsData []frontend.Variable) []frontend.Vari
 
 func BytesToFrontVariable(src []byte) []frontend.Variable {
 	result := make([]frontend.Variable, len(src))
-	for i, _ := range result {
+	for i := range result {
 		result[i] = src[i]
 	}
 	return result

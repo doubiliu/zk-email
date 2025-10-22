@@ -33,7 +33,7 @@ dkim-signature:v=1; a=rsa-sha256; c=relaxed/relaxed; d=vandenhooff.name; s=googl
 
 var client = &fakeDnsClient{
 	results: map[string][]string{
-		"google._domainkey.vandenhooff.name.": []string{
+		"google._domainkey.vandenhooff.name.": {
 			`v=DKIM1; k=rsa; p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCl2Qrp5KF1uJnQSO0YuwInVPISQRrUciXtg/5hnQl6ed+UmYvWreLyuiyaiSd9X9Zu+aZQoeKm67HCxSMpC6G2ar0NludsXW69QdfzUpB5I6fzaLW8rl/RyeGkiQ3D66kvadK1wlNfUI7Dt9WtnUs8AFz/15xvODzgTMFJDiAcAwIDAQAB`,
 		},
 	},
@@ -106,7 +106,7 @@ func TestDKIMCircuit(t *testing.T) {
 	content_type := []byte(signature.Canon().Header()(signedHeaders[6]))
 
 	bodyHash := [32]frontend.Variable{}
-	for i, _ := range bodyHash {
+	for i := range bodyHash {
 		temp, err := base64.StdEncoding.DecodeString(testBodyHash)
 		if err != nil {
 			panic(err)
@@ -210,8 +210,14 @@ func TestDKIMCircuit(t *testing.T) {
 	/*	err = test.IsSolved(&circuit, &assignment, ecc.BN254.ScalarField())
 		assert.NoError(err)*/
 	ccs, err := frontend.Compile(ecc.BN254.ScalarField(), r1cs.NewBuilder, &circuit)
+	if err != nil {
+		panic(err)
+	}
 	fmt.Println(ccs.GetNbConstraints())
 	pk, vk, err := groth16.Setup(ccs)
+	if err != nil {
+		panic(err)
+	}
 	witness, err := frontend.NewWitness(&assignment, ecc.BN254.ScalarField())
 	if err != nil {
 		panic(err)
