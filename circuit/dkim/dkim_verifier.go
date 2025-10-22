@@ -36,7 +36,7 @@ func (dk *DKIMVerifier[T]) Verify(header FixEmailHeader, body EmailBody, sig Ema
 		return err
 	}
 	rsa := NewRSA[T](api)
-	err = rsa.VerifyPkcs1v15(&publicKey, sig.Sig_Content, headerHash)
+	err = rsa.VerifyPkcs1v15(&publicKey, sig.SigContent, headerHash)
 	if err != nil {
 		return err
 	}

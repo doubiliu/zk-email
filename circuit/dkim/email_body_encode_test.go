@@ -44,60 +44,20 @@ func TestEmailBodyEncode_Encode(t *testing.T) {
 		temp = append(temp, text_prex...)*/
 	circuit := EmailBodyEncodeWrapper{
 		Body: EmailBody{
-			Prefix_Content: PaddingSlice{
-				Padding:        frontend.Variable(-1),
-				Slice:          Byte2FrontVariable([]byte(text_prex)),
-				IsLittleEndian: false,
-			},
-			Suffix_Content: PaddingSlice{
-				Padding:        frontend.Variable(-1),
-				Slice:          Byte2FrontVariable([]byte(text_suffix)),
-				IsLittleEndian: false,
-			},
-			Text_Content: PaddingSlice{
-				Padding:        frontend.Variable(-1),
-				Slice:          Byte2FrontVariable([]byte(text)),
-				IsLittleEndian: false,
-			},
+			PrefixContent: Byte2FixPadding([]byte(text_prex), false, len([]byte(text_prex))),
+			SuffixContent: Byte2FixPadding([]byte(text_suffix), false, len([]byte(text_suffix))),
+			TextContent:   Byte2FixPadding([]byte(text), false, len([]byte(text))),
 		},
 		ExpectHash: Byte2FrontVariable(bodyHash),
 	}
 	assignment := EmailBodyEncodeWrapper{
 		Body: EmailBody{
-			Prefix_Content: PaddingSlice{
-				Padding:        frontend.Variable(-1),
-				Slice:          Byte2FrontVariable([]byte(text_prex)),
-				IsLittleEndian: false,
-			},
-			Suffix_Content: PaddingSlice{
-				Padding:        frontend.Variable(-1),
-				Slice:          Byte2FrontVariable([]byte(text_suffix)),
-				IsLittleEndian: false,
-			},
-			Text_Content: PaddingSlice{
-				Padding:        frontend.Variable(-1),
-				Slice:          Byte2FrontVariable([]byte(text)),
-				IsLittleEndian: false,
-			},
+			PrefixContent: Byte2FixPadding([]byte(text_prex), false, len([]byte(text_prex))),
+			SuffixContent: Byte2FixPadding([]byte(text_suffix), false, len([]byte(text_suffix))),
+			TextContent:   Byte2FixPadding([]byte(text), false, len([]byte(text))),
 		},
 		ExpectHash: Byte2FrontVariable(bodyHash),
 	}
 	err := test.IsSolved(&circuit, &assignment, ecc.BN254.ScalarField())
 	assert.NoError(err)
-}
-
-func Byte2FrontVariable(src []byte) []frontend.Variable {
-	result := make([]frontend.Variable, len(src))
-	for i, _ := range result {
-		result[i] = src[i]
-	}
-	return result
-}
-
-func Byte2Padding(src []byte, isLittleEndian bool, padding int) PaddingSlice {
-	return PaddingSlice{
-		Padding:        frontend.Variable(padding),
-		Slice:          Byte2FrontVariable(src),
-		IsLittleEndian: isLittleEndian,
-	}
 }

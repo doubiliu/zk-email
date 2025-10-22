@@ -8,13 +8,17 @@ import (
 	"fmt"
 	"github.com/bane-labs/dbft-verifier/algorithm"
 	"github.com/consensys/gnark-crypto/ecc"
+	"github.com/consensys/gnark/backend"
+	"github.com/consensys/gnark/backend/groth16"
 	"github.com/consensys/gnark/frontend"
+	"github.com/consensys/gnark/frontend/cs/r1cs"
 	"github.com/consensys/gnark/std/math/emulated"
 	"github.com/consensys/gnark/std/math/emulated/emparams"
 	"github.com/consensys/gnark/test"
 	"github.com/containerd/containerd/pkg/hasher"
 	"strings"
 	"testing"
+	"time"
 )
 
 var headersOnly = fixupNewlines(`mime-version:1.0
@@ -122,39 +126,39 @@ func TestDKIMCircuit(t *testing.T) {
 			E: emulated.ValueOf[emparams.Mod1e4096](pubKey.(*rsa.PublicKey).E),
 		},
 		Header: FixEmailHeader{
-			Mime_Version: Byte2Padding(mimeVersion, false, -1),
-			From:         Byte2Padding(from, false, -1),
-			Date:         Byte2Padding(date, false, -1),
-			Message_id:   Byte2Padding(message_id, false, -1),
-			Subject:      Byte2Padding(subject, false, -1),
-			To:           Byte2Padding(to, false, -1),
-			Content_Type: Byte2Padding(content_type, false, -1),
+			MimeVersion: Byte2Padding(mimeVersion, false, -1),
+			From:        Byte2Padding(from, false, -1),
+			Date:        Byte2Padding(date, false, -1),
+			MessageId:   Byte2Padding(message_id, false, -1),
+			Subject:     Byte2Padding(subject, false, -1),
+			To:          Byte2Padding(to, false, -1),
+			ContentType: Byte2Padding(content_type, false, -1),
 		},
 		Body: EmailBody{
-			Prefix_Content: PaddingSlice{
+			PrefixContent: PaddingSlice{
 				Padding:        frontend.Variable(-1),
 				Slice:          Byte2FrontVariable([]byte("test data1")),
 				IsLittleEndian: false,
 			},
-			Suffix_Content: PaddingSlice{
+			SuffixContent: PaddingSlice{
 				Padding:        frontend.Variable(-1),
 				Slice:          Byte2FrontVariable([]byte("test data2")),
 				IsLittleEndian: false,
 			},
-			Text_Content: PaddingSlice{
+			TextContent: PaddingSlice{
 				Padding:        frontend.Variable(-1),
 				Slice:          Byte2FrontVariable([]byte("SpecifyData")),
 				IsLittleEndian: false,
 			},
 		},
 		Signature: EmailSig{
-			Sig_Prefix: PaddingSlice{
+			SigPrefix: PaddingSlice{
 				Padding:        frontend.Variable(-1),
 				Slice:          Byte2FrontVariable([]byte(testSigPrefix)),
 				IsLittleEndian: false,
 			},
-			BodyHash:    bodyHash,
-			Sig_Content: Byte2FrontVariable(signature.Signature()),
+			BodyHash:   bodyHash,
+			SigContent: Byte2FrontVariable(signature.Signature()),
 		},
 		SpecifyDataHash: Byte2FrontVariable(specifyDataHash),
 		ToAddressHash:   Byte2FrontVariable(toAddressHash),
@@ -165,43 +169,66 @@ func TestDKIMCircuit(t *testing.T) {
 			E: emulated.ValueOf[emparams.Mod1e4096](pubKey.(*rsa.PublicKey).E),
 		},
 		Header: FixEmailHeader{
-			Mime_Version: Byte2Padding(mimeVersion, false, -1),
-			From:         Byte2Padding(from, false, -1),
-			Date:         Byte2Padding(date, false, -1),
-			Message_id:   Byte2Padding(message_id, false, -1),
-			Subject:      Byte2Padding(subject, false, -1),
-			To:           Byte2Padding(to, false, -1),
-			Content_Type: Byte2Padding(content_type, false, -1),
+			MimeVersion: Byte2Padding(mimeVersion, false, -1),
+			From:        Byte2Padding(from, false, -1),
+			Date:        Byte2Padding(date, false, -1),
+			MessageId:   Byte2Padding(message_id, false, -1),
+			Subject:     Byte2Padding(subject, false, -1),
+			To:          Byte2Padding(to, false, -1),
+			ContentType: Byte2Padding(content_type, false, -1),
 		},
 		Body: EmailBody{
-			Prefix_Content: PaddingSlice{
+			PrefixContent: PaddingSlice{
 				Padding:        frontend.Variable(-1),
 				Slice:          Byte2FrontVariable([]byte("test data1")),
 				IsLittleEndian: false,
 			},
-			Suffix_Content: PaddingSlice{
+			SuffixContent: PaddingSlice{
 				Padding:        frontend.Variable(-1),
 				Slice:          Byte2FrontVariable([]byte("test data2")),
 				IsLittleEndian: false,
 			},
-			Text_Content: PaddingSlice{
+			TextContent: PaddingSlice{
 				Padding:        frontend.Variable(-1),
 				Slice:          Byte2FrontVariable([]byte("SpecifyData")),
 				IsLittleEndian: false,
 			},
 		},
 		Signature: EmailSig{
-			Sig_Prefix: PaddingSlice{
+			SigPrefix: PaddingSlice{
 				Padding:        frontend.Variable(-1),
 				Slice:          Byte2FrontVariable([]byte(testSigPrefix)),
 				IsLittleEndian: false,
 			},
-			BodyHash:    bodyHash,
-			Sig_Content: Byte2FrontVariable(signature.Signature()),
+			BodyHash:   bodyHash,
+			SigContent: Byte2FrontVariable(signature.Signature()),
 		},
 		SpecifyDataHash: Byte2FrontVariable(specifyDataHash),
 		ToAddressHash:   Byte2FrontVariable(toAddressHash),
 	}
-	err = test.IsSolved(&circuit, &assignment, ecc.BN254.ScalarField())
+	/*	err = test.IsSolved(&circuit, &assignment, ecc.BN254.ScalarField())
+		assert.NoError(err)*/
+	ccs, err := frontend.Compile(ecc.BN254.ScalarField(), r1cs.NewBuilder, &circuit)
+	fmt.Println(ccs.GetNbConstraints())
+	pk, vk, err := groth16.Setup(ccs)
+	witness, err := frontend.NewWitness(&assignment, ecc.BN254.ScalarField())
+	if err != nil {
+		panic(err)
+	}
+	start := time.Now()
+	proof, err := groth16.Prove(ccs, pk, witness, backend.WithProverHashToFieldFunction(hasher.NewSHA256()))
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("Prove Time: ", time.Since(start))
+	publicWitness, err := witness.Public()
+	if err != nil {
+		panic(err)
+	}
+	err = groth16.Verify(proof, vk, publicWitness, backend.WithVerifierHashToFieldFunction(hasher.NewSHA256()))
+	if err != nil {
+		panic(err)
+	}
+
 	assert.NoError(err)
 }

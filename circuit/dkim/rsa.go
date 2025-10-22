@@ -1,10 +1,7 @@
 package dkim
 
 import (
-	"slices"
-
 	"github.com/consensys/gnark/frontend"
-	"github.com/consensys/gnark/std/math/bits"
 	"github.com/consensys/gnark/std/math/emulated"
 )
 
@@ -46,7 +43,7 @@ func (rsa *RSA[T]) encrypt(pub *PublicKey[T], sign []frontend.Variable) ([]front
 		return nil, err
 	}
 	// Ensure the bitlength of pub.N is not larger than sign, here checks the value directly
-	p := f.FromBits(byteToBits(rsa.api, sign)...)
+	p := f.FromBits(ByteToBits(rsa.api, sign)...)
 	f.AssertIsLessOrEqual(p, &pub.N)
 	// Compute p = sign^e mod n
 	em := f.ToBits(f.ModExp(p, &pub.E, &pub.N))
@@ -66,17 +63,5 @@ func (rsa *RSA[T]) pkcs1v15ConstructEM(api frontend.API, hashed []frontend.Varia
 	}
 	copy(em[k-len(prefix)-len(hashed):], prefix)
 	copy(em[k-len(hashed):], hashed)
-	return byteToBits(api, em), nil
-}
-
-// byteToBits converts a byte array (MSB) to a Gnark bit array (LSB)
-func byteToBits(api frontend.API, bytesData []frontend.Variable) []frontend.Variable {
-	bitsData := make([]frontend.Variable, 0)
-	for i := 0; i < len(bytesData); i++ {
-		v := bits.ToBinary(api, bytesData[i], bits.WithNbDigits(8))
-		slices.Reverse(v)
-		bitsData = append(bitsData, v...)
-	}
-	slices.Reverse(bitsData)
-	return bitsData
+	return ByteToBits(api, em), nil
 }

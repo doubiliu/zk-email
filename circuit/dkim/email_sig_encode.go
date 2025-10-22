@@ -5,9 +5,9 @@ import (
 )
 
 type EmailSig struct {
-	Sig_Prefix  PaddingSlice
-	BodyHash    [32]frontend.Variable
-	Sig_Content []frontend.Variable
+	SigPrefix  PaddingSlice
+	BodyHash   [32]frontend.Variable
+	SigContent []frontend.Variable
 }
 
 func NewEmailSigEncode(api frontend.API) EmailSigEncode {
@@ -35,7 +35,7 @@ func (es EmailSigEncode) GetTrimmedHeader(sig EmailSig) (PaddingSlice, error) {
 	}
 	sliceApi := NewSliceApi(api)
 	//make email sig dynamic slice
-	resultSlice := sig.Sig_Prefix
+	resultSlice := sig.SigPrefix
 	resultSlice = sliceApi.concat(resultSlice, tempSlice, tempSlice.IsLittleEndian)
 	return resultSlice, nil
 }

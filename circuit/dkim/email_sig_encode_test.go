@@ -6,9 +6,6 @@ import (
 	"fmt"
 	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark/frontend"
-	"github.com/consensys/gnark/std/hash/sha2"
-	"github.com/consensys/gnark/std/math/uints"
-	"github.com/consensys/gnark/std/selector"
 	"github.com/consensys/gnark/test"
 	"testing"
 )
@@ -29,49 +26,7 @@ func (c *EmailSigEncodeWrapper) Define(api frontend.API) error {
 	if err != nil {
 		return err
 	}
-	resultSlice := sigPrexSlice
-	generator := func(api frontend.API) []UndeterminedSlice {
-		slices := make([]UndeterminedSlice, 0)
-		isEmpty := api.And(api.IsZero(api.Sub(len(resultSlice.Slice)-2, resultSlice.Padding)), api.IsZero(selector.Mux(api, len(resultSlice.Slice)-1, resultSlice.Slice...))) // == 0
-		for i := 0; i < len(resultSlice.Slice); i++ {
-			slices = append(slices, UndeterminedSlice{
-				Variables: resultSlice.Slice[i:],
-				// zeroNumber == len(hbytes) - 1 - i && !isZero
-				// isZero == 1 -> isSelect = 0
-				// isZero == 0, len(hbytes) - 1 - i - zeroNumber == 0 -> isSelect = 1
-				IsSelected: api.Mul(api.IsZero(isEmpty), api.IsZero(api.Sub(i-1, resultSlice.Padding))), // suffix = 1, and current = 1
-			})
-		}
-		slices = append(slices, UndeterminedSlice{
-			Variables:  []frontend.Variable{},
-			IsSelected: isEmpty,
-		})
-		return slices
-	}
-	sliceComposer := NewSliceComposer(api)
-	fn := func(api frontend.API, slices ...UndeterminedSlice) (DeterminedSlice, error) {
-		data := slices[0].Variables
-		hasher, err := sha2.New(api)
-		if err != nil {
-			return nil, err
-		}
-		dataU8 := make([]uints.U8, len(data))
-		u8api, err := uints.New[uints.U32](api)
-		if err != nil {
-			return nil, err
-		}
-		for i := 0; i < len(data); i++ {
-			dataU8[i] = u8api.ByteValueOf(data[i])
-		}
-		hasher.Write(dataU8)
-		ru8 := hasher.Sum()
-		r := make([]frontend.Variable, len(ru8))
-		for i := 0; i < len(r); i++ {
-			r[i] = ru8[i].Val
-		}
-		return r, nil
-	}
-	resultHash, err := sliceComposer.Process(32, fn, generator)
+	resultHash, err := sigPrexSlice.GetSliceHash(api)
 	if err != nil {
 		return err
 	}
@@ -102,28 +57,19 @@ func TestEmailSigEncode_Encode(t *testing.T) {
 	for i, _ := range bodyHash {
 		bodyHash[i] = tBodyHash[i]
 	}
-
 	circuit := EmailSigEncodeWrapper{
 		Sig: EmailSig{
-			Sig_Prefix: PaddingSlice{
-				Padding:        frontend.Variable(-1),
-				Slice:          Byte2FrontVariable([]byte(testSigPrefix)),
-				IsLittleEndian: false,
-			},
-			BodyHash:    bodyHash,
-			Sig_Content: Byte2FrontVariable([]byte(testSigData)),
+			SigPrefix:  Byte2FixPadding([]byte(testSigPrefix), false, len([]byte(testSigPrefix))),
+			BodyHash:   bodyHash,
+			SigContent: Byte2FrontVariable([]byte(testSigData)),
 		},
 		ExpectHash: Byte2FrontVariable(trimmedHash),
 	}
 	assignment := EmailSigEncodeWrapper{
 		Sig: EmailSig{
-			Sig_Prefix: PaddingSlice{
-				Padding:        frontend.Variable(-1),
-				Slice:          Byte2FrontVariable([]byte(testSigPrefix)),
-				IsLittleEndian: false,
-			},
-			BodyHash:    bodyHash,
-			Sig_Content: Byte2FrontVariable([]byte(testSigData)),
+			SigPrefix:  Byte2FixPadding([]byte(testSigPrefix), false, len([]byte(testSigPrefix))),
+			BodyHash:   bodyHash,
+			SigContent: Byte2FrontVariable([]byte(testSigData)),
 		},
 		ExpectHash: Byte2FrontVariable(trimmedHash),
 	}

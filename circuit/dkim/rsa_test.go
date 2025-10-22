@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
+	"github.com/bane-labs/dbft-verifier/algorithm"
 	"testing"
 
 	"github.com/consensys/gnark-crypto/ecc"
@@ -16,13 +17,13 @@ import (
 
 func TestRSACircuit(t *testing.T) {
 	assert := test.NewAssert(t)
-	prvkey, pubkey, err, structPubKey := GenRsaKey(2048)
+	prvkey, pubkey, err, structPubKey := algorithm.GenRsaKey(2048)
 	if err != nil {
 		panic(err)
 	}
 	data := []byte("foo")
 	// Using SHA256 to hash msg and then use rsa private key to Sign.
-	sig, err := RsaSign(prvkey, crypto.SHA256, data)
+	sig, err := algorithm.RsaSign(prvkey, crypto.SHA256, data)
 	if err != nil {
 		panic(err)
 	}
@@ -30,7 +31,7 @@ func TestRSACircuit(t *testing.T) {
 		panic("signature len not equal to key length")
 	}
 	// Using public key to verify signature.
-	err = RsaVerifySign(pubkey, crypto.SHA256, data, sig)
+	err = algorithm.RsaVerifySign(pubkey, crypto.SHA256, data, sig)
 	if err != nil {
 		panic(err)
 	}
@@ -65,9 +66,6 @@ func TestRSACircuit(t *testing.T) {
 		Sign:   sign_array,
 		Hashed: hash_array,
 	}
-	//ccs, err := frontend.Compile(ecc.BN254.ScalarField(), scs.NewBuilder, &circuit)
-	//assert.NoError(err)
-	//fmt.Println(ccs.GetNbConstraints())
 	err = test.IsSolved(&circuit, &assignment, ecc.BN254.ScalarField())
 	assert.NoError(err)
 }

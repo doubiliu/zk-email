@@ -53,9 +53,6 @@ func TestBase64EncodeCircuit(t *testing.T) {
 		Data3: data3,
 		Aim3:  aim3,
 	}
-	//ccs, err := frontend.Compile(ecc.BN254.ScalarField(), scs.NewBuilder, &circuit)
-	//assert.NoError(err)
-	//fmt.Println(ccs.GetNbConstraints())
 	err := test.IsSolved(&circuit, &assignment, ecc.BN254.ScalarField())
 	assert.NoError(err)
 }
