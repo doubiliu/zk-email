@@ -3,10 +3,11 @@ package dkim
 import (
 	"crypto/sha256"
 	"fmt"
+	"testing"
+
 	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/test"
-	"testing"
 )
 
 type EmailBodyEncodeWrapper struct {
@@ -20,43 +21,43 @@ func (c *EmailBodyEncodeWrapper) Define(api frontend.API) error {
 	if err != nil {
 		return err
 	}
-	expectHash_in_circuit := c.ExpectHash
-	for i, _ := range c.ExpectHash {
-		api.AssertIsEqual(expectHash_in_circuit[i], edata[i])
+	expectHash := c.ExpectHash
+	for i := range c.ExpectHash {
+		api.AssertIsEqual(expectHash[i], edata[i])
 	}
 	return nil
 }
 
-func TestEmailBodyEncode_Encode(t *testing.T) {
+func TestEmailBodyEncode(t *testing.T) {
 	assert := test.NewAssert(t)
 	//The email text will be split into multiple paragraphs to facilitate more flexible verification.
-	text_prex := "This is the first paragraph of the email body,"
-	text_suffix := "This is the last paragraph of the email body"
+	textPrex := "This is the first paragraph of the email body,"
+	textSuffix := "This is the last paragraph of the email body"
 	text := "special content"
-	email_body := text_prex + text + text_suffix
+	emailBody := textPrex + text + textSuffix
 	hasher := sha256.New()
-	hasher.Write([]byte(email_body))
+	hasher.Write([]byte(emailBody))
 	bodyHash := hasher.Sum(nil)
-	fmt.Println("body: ", email_body)
+	fmt.Println("body: ", emailBody)
 	fmt.Println("bodyHash:", bodyHash)
 	//dynamic length, big endian complement forward0x00...
 	/*	temp := []byte{0x00, 0x00, 0x00, 0x00}
-		temp = append(temp, text_prex...)*/
+		temp = append(temp, textPrex...)*/
 	circuit := EmailBodyEncodeWrapper{
 		Body: EmailBody{
-			PrefixContent: Byte2FixPadding([]byte(text_prex), false, len([]byte(text_prex))),
-			SuffixContent: Byte2FixPadding([]byte(text_suffix), false, len([]byte(text_suffix))),
-			TextContent:   Byte2FixPadding([]byte(text), false, len([]byte(text))),
+			PrefixContent: BytesToFixPadding([]byte(textPrex), false, len([]byte(textPrex))),
+			SuffixContent: BytesToFixPadding([]byte(textSuffix), false, len([]byte(textSuffix))),
+			TextContent:   BytesToFixPadding([]byte(text), false, len([]byte(text))),
 		},
-		ExpectHash: Byte2FrontVariable(bodyHash),
+		ExpectHash: BytesToFrontVariable(bodyHash),
 	}
 	assignment := EmailBodyEncodeWrapper{
 		Body: EmailBody{
-			PrefixContent: Byte2FixPadding([]byte(text_prex), false, len([]byte(text_prex))),
-			SuffixContent: Byte2FixPadding([]byte(text_suffix), false, len([]byte(text_suffix))),
-			TextContent:   Byte2FixPadding([]byte(text), false, len([]byte(text))),
+			PrefixContent: BytesToFixPadding([]byte(textPrex), false, len([]byte(textPrex))),
+			SuffixContent: BytesToFixPadding([]byte(textSuffix), false, len([]byte(textSuffix))),
+			TextContent:   BytesToFixPadding([]byte(text), false, len([]byte(text))),
 		},
-		ExpectHash: Byte2FrontVariable(bodyHash),
+		ExpectHash: BytesToFrontVariable(bodyHash),
 	}
 	err := test.IsSolved(&circuit, &assignment, ecc.BN254.ScalarField())
 	assert.NoError(err)

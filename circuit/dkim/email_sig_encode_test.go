@@ -4,10 +4,11 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
+	"testing"
+
 	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/test"
-	"testing"
 )
 
 type EmailSigEncodeWrapper struct {
@@ -30,14 +31,14 @@ func (c *EmailSigEncodeWrapper) Define(api frontend.API) error {
 	if err != nil {
 		return err
 	}
-	expectHash_in_circuit := c.ExpectHash
-	for i, _ := range c.ExpectHash {
-		api.AssertIsEqual(expectHash_in_circuit[i], resultHash[i])
+	expectHash := c.ExpectHash
+	for i := range c.ExpectHash {
+		api.AssertIsEqual(expectHash[i], resultHash[i])
 	}
 	return nil
 }
 
-func TestEmailSigEncode_Encode(t *testing.T) {
+func TestEmailSigEncode(t *testing.T) {
 	assert := test.NewAssert(t)
 	//The email sig will be split into multiple paragraphs to facilitate more flexible verification.
 	tBodyHash, err := base64.StdEncoding.DecodeString(testBodyHash)
@@ -54,24 +55,24 @@ func TestEmailSigEncode_Encode(t *testing.T) {
 	/*	temp := []byte{0x00, 0x00, 0x00, 0x00}
 		temp = append(temp, text_prex...)*/
 	bodyHash := [32]frontend.Variable{}
-	for i, _ := range bodyHash {
+	for i := range bodyHash {
 		bodyHash[i] = tBodyHash[i]
 	}
 	circuit := EmailSigEncodeWrapper{
 		Sig: EmailSig{
-			SigPrefix:  Byte2FixPadding([]byte(testSigPrefix), false, len([]byte(testSigPrefix))),
+			SigPrefix:  BytesToFixPadding([]byte(testSigPrefix), false, len([]byte(testSigPrefix))),
 			BodyHash:   bodyHash,
-			SigContent: Byte2FrontVariable([]byte(testSigData)),
+			SigContent: BytesToFrontVariable([]byte(testSigData)),
 		},
-		ExpectHash: Byte2FrontVariable(trimmedHash),
+		ExpectHash: BytesToFrontVariable(trimmedHash),
 	}
 	assignment := EmailSigEncodeWrapper{
 		Sig: EmailSig{
-			SigPrefix:  Byte2FixPadding([]byte(testSigPrefix), false, len([]byte(testSigPrefix))),
+			SigPrefix:  BytesToFixPadding([]byte(testSigPrefix), false, len([]byte(testSigPrefix))),
 			BodyHash:   bodyHash,
-			SigContent: Byte2FrontVariable([]byte(testSigData)),
+			SigContent: BytesToFrontVariable([]byte(testSigData)),
 		},
-		ExpectHash: Byte2FrontVariable(trimmedHash),
+		ExpectHash: BytesToFrontVariable(trimmedHash),
 	}
 	err = test.IsSolved(&circuit, &assignment, ecc.BN254.ScalarField())
 	assert.NoError(err)

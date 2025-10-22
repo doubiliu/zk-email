@@ -56,20 +56,20 @@ type DKIMVerifierWrapper[T emulated.FieldParams] struct {
 func (c *DKIMVerifierWrapper[T]) Define(api frontend.API) error {
 	//check
 	bodyEncode := NewEmailBodyEncode(api)
-	specifyDataHash_in_circuit, err := bodyEncode.GetSpecifyDataHash(c.Body)
+	specifyDataHash, err := bodyEncode.GetSpecifyDataHash(c.Body)
 	if err != nil {
 		return err
 	}
-	for i, _ := range c.SpecifyDataHash {
-		api.AssertIsEqual(c.SpecifyDataHash[i], specifyDataHash_in_circuit[i])
+	for i := range c.SpecifyDataHash {
+		api.AssertIsEqual(c.SpecifyDataHash[i], specifyDataHash[i])
 	}
 	headerEncode := NewFixEmailHeaderEncode(api)
-	toAddressHash_in_circuit, err := headerEncode.GetToAddressHash(c.Header)
+	toAddressHash, err := headerEncode.GetToAddressHash(c.Header)
 	if err != nil {
 		return err
 	}
-	for i, _ := range toAddressHash_in_circuit {
-		api.AssertIsEqual(toAddressHash_in_circuit[i], c.ToAddressHash[i])
+	for i := range toAddressHash {
+		api.AssertIsEqual(toAddressHash[i], c.ToAddressHash[i])
 	}
 	v := NewDKIMVerifier[T](api)
 	err = v.Verify(c.Header, c.Body, c.Signature, *c.PublicKey)

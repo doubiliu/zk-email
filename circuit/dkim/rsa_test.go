@@ -5,9 +5,10 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
-	"github.com/bane-labs/dbft-verifier/algorithm"
+	"math/big"
 	"testing"
 
+	"github.com/bane-labs/dbft-verifier/algorithm"
 	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/std/math/emulated"
@@ -37,17 +38,20 @@ func TestRSACircuit(t *testing.T) {
 	}
 	fmt.Println("verify signature succeeded")
 	fmt.Println(len(base64.StdEncoding.EncodeToString(sig)))
-	return
-	sign_array := make([]frontend.Variable, len(sig))
+
+	fmt.Println("N bytes", structPubKey.N.FillBytes(make([]byte, 512)))
+	fmt.Println("E bytes", new(big.Int).SetInt64(int64(structPubKey.E)).FillBytes(make([]byte, 512)))
+
+	signBytes := make([]frontend.Variable, len(sig))
 	for i := 0; i < len(sig); i++ {
-		sign_array[i] = sig[i]
+		signBytes[i] = sig[i]
 	}
 	hash := sha256.New()
 	hash.Write(data)
 	hashSum := hash.Sum(nil)
-	hash_array := make([]frontend.Variable, len(hashSum))
+	hashBytes := make([]frontend.Variable, len(hashSum))
 	for i := 0; i < len(hashSum); i++ {
-		hash_array[i] = hashSum[i]
+		hashBytes[i] = hashSum[i]
 	}
 
 	circuit := RSAWrapper[emparams.Mod1e4096]{
@@ -55,16 +59,16 @@ func TestRSACircuit(t *testing.T) {
 			N: emulated.ValueOf[emparams.Mod1e4096](structPubKey.N),
 			E: emulated.ValueOf[emparams.Mod1e4096](structPubKey.E),
 		},
-		Sign:   sign_array,
-		Hashed: hash_array,
+		Sign:   signBytes,
+		Hashed: hashBytes,
 	}
 	assignment := RSAWrapper[emparams.Mod1e4096]{
 		PublicKey: &PublicKey[emparams.Mod1e4096]{
 			N: emulated.ValueOf[emparams.Mod1e4096](structPubKey.N),
 			E: emulated.ValueOf[emparams.Mod1e4096](structPubKey.E),
 		},
-		Sign:   sign_array,
-		Hashed: hash_array,
+		Sign:   signBytes,
+		Hashed: hashBytes,
 	}
 	err = test.IsSolved(&circuit, &assignment, ecc.BN254.ScalarField())
 	assert.NoError(err)

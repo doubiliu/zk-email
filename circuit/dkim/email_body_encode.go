@@ -26,8 +26,7 @@ func (eb EmailBodyEncode) GetBodyHash(body EmailBody) ([]frontend.Variable, erro
 	bodySlice = sliceApi.concat(bodySlice, body.TextContent, bodySlice.IsLittleEndian)
 	bodySlice = sliceApi.concat(bodySlice, body.SuffixContent, bodySlice.IsLittleEndian)
 	//拼凑email全文动态分片
-	resultSlice := bodySlice
-	emailBodyHash, err := resultSlice.GetSliceHash(api)
+	emailBodyHash, err := bodySlice.GetSliceHash(api)
 	if err != nil {
 		return nil, err
 	}
@@ -36,8 +35,7 @@ func (eb EmailBodyEncode) GetBodyHash(body EmailBody) ([]frontend.Variable, erro
 
 func (eb EmailBodyEncode) GetSpecifyDataHash(body EmailBody) ([]frontend.Variable, error) {
 	api := eb.api
-	resultSlice := body.TextContent
-	specifyDataHash, err := resultSlice.GetSliceHash(api)
+	specifyDataHash, err := body.TextContent.GetSliceHash(api)
 	if err != nil {
 		return nil, err
 	}
