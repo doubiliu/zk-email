@@ -3,11 +3,12 @@ package dkim
 import (
 	"errors"
 	"fmt"
+	"testing"
+
 	"github.com/bane-labs/dbft-verifier/algorithm"
 	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/test"
-	"testing"
 )
 
 type FixEmailHeaderEncodeWrapper struct {
@@ -68,16 +69,16 @@ func TestFixEmailHeaderEncode(t *testing.T) {
 	trimmedHeader := []byte(tHeader)
 
 	ch := FixEmailHeader{
-		MimeVersion: Byte2FixPadding(mimeVersion, false, len(mimeVersion)),
-		From:        Byte2FixPadding(from, false, len(from)),
-		Date:        Byte2FixPadding(date, false, len(date)),
-		MessageId:   Byte2FixPadding(messageId, false, len(messageId)),
-		Subject:     Byte2FixPadding(subject, false, len(subject)),
-		To:          Byte2FixPadding(to, false, len(to)),
-		ContentType: Byte2FixPadding(contentType, false, len(contentType)),
+		MimeVersion: BytesToFixPadding(mimeVersion, false, len(mimeVersion)),
+		From:        BytesToFixPadding(from, false, len(from)),
+		Date:        BytesToFixPadding(date, false, len(date)),
+		MessageId:   BytesToFixPadding(messageId, false, len(messageId)),
+		Subject:     BytesToFixPadding(subject, false, len(subject)),
+		To:          BytesToFixPadding(to, false, len(to)),
+		ContentType: BytesToFixPadding(contentType, false, len(contentType)),
 	}
-	TrimmedHeader := Byte2FixPadding(trimmedHeader, false, len(trimmedHeader))
-	expect := Byte2FrontVariable(headersHash)
+	TrimmedHeader := BytesToFixPadding(trimmedHeader, false, len(trimmedHeader))
+	expect := BytesToFrontVariable(headersHash)
 	circuit := FixEmailHeaderEncodeWrapper{
 		Header:        ch,
 		TrimmedHeader: TrimmedHeader,
@@ -159,12 +160,12 @@ func TestCustomEmailHeaderEncode(t *testing.T) {
 	trimmedHeader := []byte(tHeader)
 
 	ch := CustomEmailHeader{
-		PrefixData:  Byte2FixPadding(predixData, false, len(predixData)),
-		SpecifyData: Byte2FixPadding(specifyData, false, len(specifyData)),
-		SuffixData:  Byte2FixPadding(suffixData, false, len(suffixData)),
+		PrefixData:  BytesToFixPadding(predixData, false, len(predixData)),
+		SpecifyData: BytesToFixPadding(specifyData, false, len(specifyData)),
+		SuffixData:  BytesToFixPadding(suffixData, false, len(suffixData)),
 	}
-	TrimmedHeader := Byte2FixPadding(trimmedHeader, false, len(trimmedHeader))
-	expect := Byte2FrontVariable(headersHash)
+	TrimmedHeader := BytesToFixPadding(trimmedHeader, false, len(trimmedHeader))
+	expect := BytesToFrontVariable(headersHash)
 	circuit := CustomEmailHeaderWrapper{
 		Header:        ch,
 		TrimmedHeader: TrimmedHeader,

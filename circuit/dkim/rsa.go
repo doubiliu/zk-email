@@ -1,6 +1,8 @@
 package dkim
 
 import (
+	"fmt"
+
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/std/math/emulated"
 )
@@ -34,6 +36,13 @@ func (rsa *RSA[T]) VerifyPkcs1v15(pubKey *PublicKey[T], sign, hashed []frontend.
 	for i := 0; i < len(expected); i++ {
 		rsa.api.AssertIsEqual(em[i], expected[i])
 	}
+	// Print N bytes and E bytes for debug
+	f, err := emulated.NewField[T](rsa.api)
+	if err != nil {
+		return err
+	}
+	fmt.Println("N bytes (in circuit)", BitsToBytes(rsa.api, f.ToBits(&pubKey.N)))
+	fmt.Println("E bytes (in circuit)", BitsToBytes(rsa.api, f.ToBits(&pubKey.E)))
 	return nil
 }
 
@@ -43,7 +52,7 @@ func (rsa *RSA[T]) encrypt(pub *PublicKey[T], sign []frontend.Variable) ([]front
 		return nil, err
 	}
 	// Ensure the bitlength of pub.N is not larger than sign, here checks the value directly
-	p := f.FromBits(ByteToBits(rsa.api, sign)...)
+	p := f.FromBits(BytesToBits(rsa.api, sign)...)
 	f.AssertIsLessOrEqual(p, &pub.N)
 	// Compute p = sign^e mod n
 	em := f.ToBits(f.ModExp(p, &pub.E, &pub.N))
@@ -63,5 +72,5 @@ func (rsa *RSA[T]) pkcs1v15ConstructEM(api frontend.API, hashed []frontend.Varia
 	}
 	copy(em[k-len(prefix)-len(hashed):], prefix)
 	copy(em[k-len(hashed):], hashed)
-	return ByteToBits(api, em), nil
+	return BytesToBits(api, em), nil
 }

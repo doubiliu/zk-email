@@ -5,9 +5,10 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
-	"github.com/bane-labs/dbft-verifier/algorithm"
+	"math/big"
 	"testing"
 
+	"github.com/bane-labs/dbft-verifier/algorithm"
 	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/std/math/emulated"
@@ -37,7 +38,10 @@ func TestRSACircuit(t *testing.T) {
 	}
 	fmt.Println("verify signature succeeded")
 	fmt.Println(len(base64.StdEncoding.EncodeToString(sig)))
-	return
+
+	fmt.Println("N bytes", structPubKey.N.FillBytes(make([]byte, 512)))
+	fmt.Println("E bytes", new(big.Int).SetInt64(int64(structPubKey.E)).FillBytes(make([]byte, 512)))
+
 	sign_array := make([]frontend.Variable, len(sig))
 	for i := 0; i < len(sig); i++ {
 		sign_array[i] = sig[i]

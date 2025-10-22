@@ -4,10 +4,11 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
+	"testing"
+
 	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/test"
-	"testing"
 )
 
 type EmailSigEncodeWrapper struct {
@@ -59,19 +60,19 @@ func TestEmailSigEncode_Encode(t *testing.T) {
 	}
 	circuit := EmailSigEncodeWrapper{
 		Sig: EmailSig{
-			SigPrefix:  Byte2FixPadding([]byte(testSigPrefix), false, len([]byte(testSigPrefix))),
+			SigPrefix:  BytesToFixPadding([]byte(testSigPrefix), false, len([]byte(testSigPrefix))),
 			BodyHash:   bodyHash,
-			SigContent: Byte2FrontVariable([]byte(testSigData)),
+			SigContent: BytesToFrontVariable([]byte(testSigData)),
 		},
-		ExpectHash: Byte2FrontVariable(trimmedHash),
+		ExpectHash: BytesToFrontVariable(trimmedHash),
 	}
 	assignment := EmailSigEncodeWrapper{
 		Sig: EmailSig{
-			SigPrefix:  Byte2FixPadding([]byte(testSigPrefix), false, len([]byte(testSigPrefix))),
+			SigPrefix:  BytesToFixPadding([]byte(testSigPrefix), false, len([]byte(testSigPrefix))),
 			BodyHash:   bodyHash,
-			SigContent: Byte2FrontVariable([]byte(testSigData)),
+			SigContent: BytesToFrontVariable([]byte(testSigData)),
 		},
-		ExpectHash: Byte2FrontVariable(trimmedHash),
+		ExpectHash: BytesToFrontVariable(trimmedHash),
 	}
 	err = test.IsSolved(&circuit, &assignment, ecc.BN254.ScalarField())
 	assert.NoError(err)

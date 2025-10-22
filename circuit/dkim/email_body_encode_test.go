@@ -3,10 +3,11 @@ package dkim
 import (
 	"crypto/sha256"
 	"fmt"
+	"testing"
+
 	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/test"
-	"testing"
 )
 
 type EmailBodyEncodeWrapper struct {
@@ -44,19 +45,19 @@ func TestEmailBodyEncode_Encode(t *testing.T) {
 		temp = append(temp, text_prex...)*/
 	circuit := EmailBodyEncodeWrapper{
 		Body: EmailBody{
-			PrefixContent: Byte2FixPadding([]byte(text_prex), false, len([]byte(text_prex))),
-			SuffixContent: Byte2FixPadding([]byte(text_suffix), false, len([]byte(text_suffix))),
-			TextContent:   Byte2FixPadding([]byte(text), false, len([]byte(text))),
+			PrefixContent: BytesToFixPadding([]byte(text_prex), false, len([]byte(text_prex))),
+			SuffixContent: BytesToFixPadding([]byte(text_suffix), false, len([]byte(text_suffix))),
+			TextContent:   BytesToFixPadding([]byte(text), false, len([]byte(text))),
 		},
-		ExpectHash: Byte2FrontVariable(bodyHash),
+		ExpectHash: BytesToFrontVariable(bodyHash),
 	}
 	assignment := EmailBodyEncodeWrapper{
 		Body: EmailBody{
-			PrefixContent: Byte2FixPadding([]byte(text_prex), false, len([]byte(text_prex))),
-			SuffixContent: Byte2FixPadding([]byte(text_suffix), false, len([]byte(text_suffix))),
-			TextContent:   Byte2FixPadding([]byte(text), false, len([]byte(text))),
+			PrefixContent: BytesToFixPadding([]byte(text_prex), false, len([]byte(text_prex))),
+			SuffixContent: BytesToFixPadding([]byte(text_suffix), false, len([]byte(text_suffix))),
+			TextContent:   BytesToFixPadding([]byte(text), false, len([]byte(text))),
 		},
-		ExpectHash: Byte2FrontVariable(bodyHash),
+		ExpectHash: BytesToFrontVariable(bodyHash),
 	}
 	err := test.IsSolved(&circuit, &assignment, ecc.BN254.ScalarField())
 	assert.NoError(err)
