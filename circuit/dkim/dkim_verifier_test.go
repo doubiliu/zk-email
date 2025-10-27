@@ -6,10 +6,6 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"strings"
-	"testing"
-	"time"
-
 	"github.com/bane-labs/dbft-verifier/algorithm"
 	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark/backend"
@@ -20,6 +16,10 @@ import (
 	"github.com/consensys/gnark/std/math/emulated/emparams"
 	"github.com/consensys/gnark/test"
 	"github.com/containerd/containerd/pkg/hasher"
+	"math/big"
+	"strings"
+	"testing"
+	"time"
 )
 
 var headersOnly = fixupNewlines(`mime-version:1.0
@@ -55,7 +55,7 @@ func fixupNewlines(s string) string {
 	return strings.Replace(s, "\n", "\r\n", -1)
 }
 
-func TestDKIMCircuit(t *testing.T) {
+func TestDKIMCircuitByFixedHeader(t *testing.T) {
 	assert := test.NewAssert(t)
 	email := algorithm.ParseEmail(headersOnly)
 	var signatureHeader string
@@ -106,21 +106,31 @@ func TestDKIMCircuit(t *testing.T) {
 	content_type := []byte(signature.Canon().Header()(signedHeaders[6]))
 
 	bodyHash := [32]frontend.Variable{}
+	temp, err := base64.StdEncoding.DecodeString(testBodyHash)
+	if err != nil {
+		panic(err)
+	}
 	for i := range bodyHash {
-		temp, err := base64.StdEncoding.DecodeString(testBodyHash)
-		if err != nil {
-			panic(err)
-		}
 		bodyHash[i] = temp[i]
 	}
+	//compute publicInputHash
+	nBytes := pubKey.(*rsa.PublicKey).N.FillBytes(make([]byte, 512))
+	eBytes := new(big.Int).SetInt64(int64(pubKey.(*rsa.PublicKey).E)).FillBytes(make([]byte, 512))
+	fmt.Println("N bytes:", nBytes)
+	fmt.Println("E bytes:", eBytes)
+	fmt.Println("N bytes Length:", len(nBytes))
+	fmt.Println("E bytes Length:", len(eBytes))
+	fmt.Println("bodyHash:", temp)
 	sha256 := hasher.NewSHA256()
 	sha256.Write(to)
-	toAddressHash := sha256.Sum(nil)
-
+	toHash := sha256.Sum(nil)
 	sha256.Reset()
-	sha256.Write([]byte("SpecifyData"))
-	specifyDataHash := sha256.Sum(nil)
-
+	fmt.Println("toHahHash:", toHash)
+	sha256.Write(nBytes)
+	sha256.Write(eBytes)
+	sha256.Write(temp)
+	sha256.Write(toHash)
+	pubInputHash := sha256.Sum(nil)
 	circuit := DKIMVerifierWrapper[emparams.Mod1e4096]{
 		PublicKey: &PublicKey[emparams.Mod1e4096]{
 			N: emulated.ValueOf[emparams.Mod1e4096](pubKey.(*rsa.PublicKey).N),
@@ -135,23 +145,23 @@ func TestDKIMCircuit(t *testing.T) {
 			To:          BytesToPadding(to, false, -1),
 			ContentType: BytesToPadding(content_type, false, -1),
 		},
-		Body: EmailBody{
-			PrefixContent: PaddingSlice{
-				Padding:        frontend.Variable(-1),
-				Slice:          BytesToFrontVariable([]byte("test data1")),
-				IsLittleEndian: false,
-			},
-			SuffixContent: PaddingSlice{
-				Padding:        frontend.Variable(-1),
-				Slice:          BytesToFrontVariable([]byte("test data2")),
-				IsLittleEndian: false,
-			},
-			TextContent: PaddingSlice{
-				Padding:        frontend.Variable(-1),
-				Slice:          BytesToFrontVariable([]byte("SpecifyData")),
-				IsLittleEndian: false,
-			},
-		},
+		/*		Body: EmailBody{
+				PrefixContent: PaddingSlice{
+					Padding:        frontend.Variable(-1),
+					Slice:          BytesToFrontVariable([]byte("test data1")),
+					IsLittleEndian: false,
+				},
+				SuffixContent: PaddingSlice{
+					Padding:        frontend.Variable(-1),
+					Slice:          BytesToFrontVariable([]byte("test data2")),
+					IsLittleEndian: false,
+				},
+				TextContent: PaddingSlice{
+					Padding:        frontend.Variable(-1),
+					Slice:          BytesToFrontVariable([]byte("SpecifyData")),
+					IsLittleEndian: false,
+				},
+			},*/
 		Signature: EmailSig{
 			SigPrefix: PaddingSlice{
 				Padding:        frontend.Variable(-1),
@@ -161,8 +171,7 @@ func TestDKIMCircuit(t *testing.T) {
 			BodyHash:   bodyHash,
 			SigContent: BytesToFrontVariable(signature.Signature()),
 		},
-		SpecifyDataHash: BytesToFrontVariable(specifyDataHash),
-		ToAddressHash:   BytesToFrontVariable(toAddressHash),
+		PubInputHash: BytesToFrontVariable(pubInputHash),
 	}
 	assignment := DKIMVerifierWrapper[emparams.Mod1e4096]{
 		PublicKey: &PublicKey[emparams.Mod1e4096]{
@@ -178,22 +187,155 @@ func TestDKIMCircuit(t *testing.T) {
 			To:          BytesToPadding(to, false, -1),
 			ContentType: BytesToPadding(content_type, false, -1),
 		},
-		Body: EmailBody{
-			PrefixContent: PaddingSlice{
+		/*		Body: EmailBody{
+				PrefixContent: PaddingSlice{
+					Padding:        frontend.Variable(-1),
+					Slice:          BytesToFrontVariable([]byte("test data1")),
+					IsLittleEndian: false,
+				},
+				SuffixContent: PaddingSlice{
+					Padding:        frontend.Variable(-1),
+					Slice:          BytesToFrontVariable([]byte("test data2")),
+					IsLittleEndian: false,
+				},
+				TextContent: PaddingSlice{
+					Padding:        frontend.Variable(-1),
+					Slice:          BytesToFrontVariable([]byte("SpecifyData")),
+					IsLittleEndian: false,
+				},
+			},*/
+		Signature: EmailSig{
+			SigPrefix: PaddingSlice{
 				Padding:        frontend.Variable(-1),
-				Slice:          BytesToFrontVariable([]byte("test data1")),
+				Slice:          BytesToFrontVariable([]byte(testSigPrefix)),
 				IsLittleEndian: false,
 			},
-			SuffixContent: PaddingSlice{
-				Padding:        frontend.Variable(-1),
-				Slice:          BytesToFrontVariable([]byte("test data2")),
-				IsLittleEndian: false,
-			},
-			TextContent: PaddingSlice{
-				Padding:        frontend.Variable(-1),
-				Slice:          BytesToFrontVariable([]byte("SpecifyData")),
-				IsLittleEndian: false,
-			},
+			BodyHash:   bodyHash,
+			SigContent: BytesToFrontVariable(signature.Signature()),
+		},
+		PubInputHash: BytesToFrontVariable(pubInputHash),
+	}
+	err = test.IsSolved(&circuit, &assignment, ecc.BN254.ScalarField())
+	//assert.NoError(err)
+	/*	ccs, err := frontend.Compile(ecc.BN254.ScalarField(), r1cs.NewBuilder, &circuit)
+		if err != nil {
+			panic(err)
+		}
+		fmt.Println(ccs.GetNbConstraints())
+		pk, vk, err := groth16.Setup(ccs)
+		if err != nil {
+			panic(err)
+		}
+		witness, err := frontend.NewWitness(&assignment, ecc.BN254.ScalarField())
+		if err != nil {
+			panic(err)
+		}
+		start := time.Now()
+		proof, err := groth16.Prove(ccs, pk, witness, backend.WithProverHashToFieldFunction(hasher.NewSHA256()))
+		if err != nil {
+			panic(err)
+		}
+		fmt.Println("Prove Time: ", time.Since(start))
+		publicWitness, err := witness.Public()
+		if err != nil {
+			panic(err)
+		}
+		err = groth16.Verify(proof, vk, publicWitness, backend.WithVerifierHashToFieldFunction(hasher.NewSHA256()))
+		if err != nil {
+			panic(err)
+		}*/
+
+	assert.NoError(err)
+}
+
+func TestDKIMCircuitByCustomedHeader(t *testing.T) {
+	assert := test.NewAssert(t)
+	email := algorithm.ParseEmail(headersOnly)
+	var signatureHeader string
+	for _, header := range email.Headers() {
+		// we don't support DKIM-Signature headers signing other DKIM-Signature
+		// headers
+		if algorithm.IsSignatureHeader(header) {
+			if signatureHeader != "" {
+				panic(errors.New("multiple DKIM headers"))
+			}
+			signatureHeader = header
+		}
+	}
+	if signatureHeader == "" {
+		panic(errors.New("no DKIM header found"))
+	}
+	signature, err := algorithm.ParseSignature(signatureHeader)
+	if err != nil {
+		panic(err)
+	}
+	signedHeaders := algorithm.ExtractHeaders(email.Headers(), signature.HeaderNames())
+	//从DNS查找RSA公钥
+	txtRecords, err := client.LookupTxt(signature.TxtRecordName())
+	if err != nil {
+		panic(err)
+	}
+	//验签
+	txtRecord := txtRecords[0]
+	fmt.Println("public key:" + txtRecord)
+	key := algorithm.ParsePubkey(txtRecord)
+	fmt.Println("DKIM signature:" + base64.StdEncoding.EncodeToString(signature.Signature()))
+	pubKey, err := x509.ParsePKIXPublicKey(key.Key())
+	if err != nil {
+		panic(err)
+	}
+	/*	tHeader := signature.Canon().Header()(signature.TrimmedHeader())
+	 */mimeVersion := []byte(signature.Canon().Header()(signedHeaders[0]))
+	from := []byte(signature.Canon().Header()(signedHeaders[1]))
+	date := []byte(signature.Canon().Header()(signedHeaders[2]))
+	message_id := []byte(signature.Canon().Header()(signedHeaders[3]))
+	subject := []byte(signature.Canon().Header()(signedHeaders[4]))
+	to := []byte(signature.Canon().Header()(signedHeaders[5]))
+	content_type := []byte(signature.Canon().Header()(signedHeaders[6]))
+
+	bodyHash := [32]frontend.Variable{}
+	temp, err := base64.StdEncoding.DecodeString(testBodyHash)
+	if err != nil {
+		panic(err)
+	}
+	for i := range bodyHash {
+		bodyHash[i] = temp[i]
+	}
+	//compute publicInputHash
+	nBytes := pubKey.(*rsa.PublicKey).N.FillBytes(make([]byte, 512))
+	eBytes := new(big.Int).SetInt64(int64(pubKey.(*rsa.PublicKey).E)).FillBytes(make([]byte, 512))
+	fmt.Println("N bytes:", nBytes)
+	fmt.Println("E bytes:", eBytes)
+	fmt.Println("N bytes Length:", len(nBytes))
+	fmt.Println("E bytes Length:", len(eBytes))
+	fmt.Println("bodyHash:", temp)
+	sha256 := hasher.NewSHA256()
+	sha256.Write(to)
+	toHash := sha256.Sum(nil)
+	sha256.Reset()
+	fmt.Println("toHahHash:", toHash)
+	sha256.Write(nBytes)
+	sha256.Write(eBytes)
+	sha256.Write(temp)
+	sha256.Write(toHash)
+	pubInputHash := sha256.Sum(nil)
+	predixData := mimeVersion
+	predixData = append(predixData, from...)
+	predixData = append(predixData, date...)
+	predixData = append(predixData, message_id...)
+	predixData = append(predixData, subject...)
+	specifyData := to
+	suffixData := content_type
+
+	circuit := CustomDKIMVerifierWrapper[emparams.Mod1e4096]{
+		PublicKey: &PublicKey[emparams.Mod1e4096]{
+			N: emulated.ValueOf[emparams.Mod1e4096](pubKey.(*rsa.PublicKey).N),
+			E: emulated.ValueOf[emparams.Mod1e4096](pubKey.(*rsa.PublicKey).E),
+		},
+		Header: CustomEmailHeader{
+			PrefixData:  BytesToPadding(predixData, false, -1),
+			SpecifyData: BytesToPadding(specifyData, false, -1),
+			SuffixData:  BytesToPadding(suffixData, false, -1),
 		},
 		Signature: EmailSig{
 			SigPrefix: PaddingSlice{
@@ -204,11 +346,31 @@ func TestDKIMCircuit(t *testing.T) {
 			BodyHash:   bodyHash,
 			SigContent: BytesToFrontVariable(signature.Signature()),
 		},
-		SpecifyDataHash: BytesToFrontVariable(specifyDataHash),
-		ToAddressHash:   BytesToFrontVariable(toAddressHash),
+		PubInputHash: BytesToFrontVariable(pubInputHash),
 	}
-	/*	err = test.IsSolved(&circuit, &assignment, ecc.BN254.ScalarField())
-		assert.NoError(err)*/
+	assignment := CustomDKIMVerifierWrapper[emparams.Mod1e4096]{
+		PublicKey: &PublicKey[emparams.Mod1e4096]{
+			N: emulated.ValueOf[emparams.Mod1e4096](pubKey.(*rsa.PublicKey).N),
+			E: emulated.ValueOf[emparams.Mod1e4096](pubKey.(*rsa.PublicKey).E),
+		},
+		Header: CustomEmailHeader{
+			PrefixData:  BytesToPadding(predixData, false, -1),
+			SpecifyData: BytesToPadding(specifyData, false, -1),
+			SuffixData:  BytesToPadding(suffixData, false, -1),
+		},
+		Signature: EmailSig{
+			SigPrefix: PaddingSlice{
+				Padding:        frontend.Variable(-1),
+				Slice:          BytesToFrontVariable([]byte(testSigPrefix)),
+				IsLittleEndian: false,
+			},
+			BodyHash:   bodyHash,
+			SigContent: BytesToFrontVariable(signature.Signature()),
+		},
+		PubInputHash: BytesToFrontVariable(pubInputHash),
+	}
+	//err = test.IsSolved(&circuit, &assignment, ecc.BN254.ScalarField())
+	//assert.NoError(err)
 	ccs, err := frontend.Compile(ecc.BN254.ScalarField(), r1cs.NewBuilder, &circuit)
 	if err != nil {
 		panic(err)
@@ -236,6 +398,5 @@ func TestDKIMCircuit(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-
 	assert.NoError(err)
 }

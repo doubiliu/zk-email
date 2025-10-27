@@ -1,8 +1,6 @@
 package dkim
 
 import (
-	"fmt"
-
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/std/math/emulated"
 )
@@ -36,13 +34,6 @@ func (rsa *RSA[T]) VerifyPkcs1v15(pubKey *PublicKey[T], sign, hashed []frontend.
 	for i := 0; i < len(expected); i++ {
 		rsa.api.AssertIsEqual(em[i], expected[i])
 	}
-	// Print N bytes and E bytes for debug
-	f, err := emulated.NewField[T](rsa.api)
-	if err != nil {
-		return err
-	}
-	fmt.Println("N bytes (in circuit)", BitsToBytes(rsa.api, f.ToBits(&pubKey.N)))
-	fmt.Println("E bytes (in circuit)", BitsToBytes(rsa.api, f.ToBits(&pubKey.E)))
 	return nil
 }
 
