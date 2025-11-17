@@ -37,11 +37,9 @@ func TestRSACircuit(t *testing.T) {
 		panic(err)
 	}
 	fmt.Println("verify signature succeeded")
-	fmt.Println(len(base64.StdEncoding.EncodeToString(sig)))
-
-	fmt.Println("N bytes", structPubKey.N.FillBytes(make([]byte, 512)))
-	fmt.Println("E bytes", new(big.Int).SetInt64(int64(structPubKey.E)).FillBytes(make([]byte, 512)))
-
+	fmt.Println("sig length:", len(base64.StdEncoding.EncodeToString(sig)))
+	fmt.Println("N bytes:", structPubKey.N.FillBytes(make([]byte, 512)))
+	fmt.Println("E bytes:", new(big.Int).SetInt64(int64(structPubKey.E)).FillBytes(make([]byte, 512)))
 	signBytes := make([]frontend.Variable, len(sig))
 	for i := 0; i < len(sig); i++ {
 		signBytes[i] = sig[i]
@@ -53,7 +51,6 @@ func TestRSACircuit(t *testing.T) {
 	for i := 0; i < len(hashSum); i++ {
 		hashBytes[i] = hashSum[i]
 	}
-
 	circuit := RSAWrapper[emparams.Mod1e4096]{
 		PublicKey: &PublicKey[emparams.Mod1e4096]{
 			N: emulated.ValueOf[emparams.Mod1e4096](structPubKey.N),

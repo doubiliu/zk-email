@@ -3,7 +3,7 @@ package dkim
 import (
 	"crypto/sha256"
 	"encoding/base64"
-	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/consensys/gnark-crypto/ecc"
@@ -16,18 +16,18 @@ type EmailSigEncodeWrapper struct {
 	ExpectHash []frontend.Variable
 }
 
-const testSigPrefixData = "dkim-signature:v=1; a=rsa-sha256; c=relaxed/relaxed; d=vandenhooff.name; s=google; h=mime-version:from:date:message-id:subject:to:content-type; bh=47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=; b="
+const testTrimmedHeader = "dkim-signature:v=1; a=rsa-sha256; c=relaxed/relaxed; d=vandenhooff.name; s=google; h=mime-version:from:date:message-id:subject:to:content-type; bh=47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=; b="
 const testSigPrefix = "dkim-signature:v=1; a=rsa-sha256; c=relaxed/relaxed; d=vandenhooff.name; s=google; h=mime-version:from:date:message-id:subject:to:content-type; bh="
 const testBodyHash = "47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU="
 const testSigData = "NCOUEepJZ6cdKYtq61hifQ9K0fimliTNcDVDBQ8C1OQToNxNGQuGifUxWQ/6odRnmm+TGraJoXyKu2WwVl2auHW6Hug/9QBWg6JIQrUl3TLK5Z07IZHpqBFrXjqV/fd6Yl/1+LZSaJ9lwo6YW6LvwoAq4AUwPDZqXeak7i5pj2U="
 
 func (c *EmailSigEncodeWrapper) Define(api frontend.API) error {
 	sigEncode := NewEmailSigEncode(api)
-	sigPrexSlice, err := sigEncode.GetTrimmedHeader(c.Sig)
+	trimmedHeader, err := sigEncode.GetTrimmedHeader(c.Sig)
 	if err != nil {
 		return err
 	}
-	resultHash, err := sigPrexSlice.GetSliceHash(api)
+	resultHash, err := trimmedHeader.GetSliceHash(api)
 	if err != nil {
 		return err
 	}
@@ -45,31 +45,29 @@ func TestEmailSigEncode(t *testing.T) {
 	if err != nil {
 		return
 	}
-	fmt.Println("tBodyHash:", tBodyHash)
-	fmt.Println([]byte(testSigPrefix))
 	hasher := sha256.New()
-	hasher.Write([]byte(testSigPrefixData))
+	hasher.Write([]byte(testTrimmedHeader))
 	trimmedHash := hasher.Sum(nil)
-	fmt.Println("TrimmedHeaderHash:", trimmedHash)
-	//dynamic length, big endian complement forward0x00...
-	/*	temp := []byte{0x00, 0x00, 0x00, 0x00}
-		temp = append(temp, text_prex...)*/
+	SigPrefix := testTrimmedHeader[0 : strings.Index(testTrimmedHeader, "bh=")+3]
+	SigSuffix := testTrimmedHeader[strings.Index(testTrimmedHeader, "bh=")+3+len(testBodyHash) : strings.Index(testTrimmedHeader, "b=")+2]
 	bodyHash := [32]frontend.Variable{}
 	for i := range bodyHash {
 		bodyHash[i] = tBodyHash[i]
 	}
 	circuit := EmailSigEncodeWrapper{
 		Sig: EmailSig{
-			SigPrefix:  BytesToFixPadding([]byte(testSigPrefix), false, len([]byte(testSigPrefix))),
+			SigPrefix:  BytesToPadding([]byte(SigPrefix), false, -1),
 			BodyHash:   bodyHash,
+			SigSuffix:  BytesToPadding([]byte(SigSuffix), false, -1),
 			SigContent: BytesToFrontVariable([]byte(testSigData)),
 		},
 		ExpectHash: BytesToFrontVariable(trimmedHash),
 	}
 	assignment := EmailSigEncodeWrapper{
 		Sig: EmailSig{
-			SigPrefix:  BytesToFixPadding([]byte(testSigPrefix), false, len([]byte(testSigPrefix))),
+			SigPrefix:  BytesToPadding([]byte(SigPrefix), false, -1),
 			BodyHash:   bodyHash,
+			SigSuffix:  BytesToPadding([]byte(SigSuffix), false, -1),
 			SigContent: BytesToFrontVariable([]byte(testSigData)),
 		},
 		ExpectHash: BytesToFrontVariable(trimmedHash),

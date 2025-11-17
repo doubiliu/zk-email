@@ -2,7 +2,6 @@ package dkim
 
 import (
 	"crypto/sha256"
-	"fmt"
 	"testing"
 
 	"github.com/consensys/gnark-crypto/ecc"
@@ -38,11 +37,6 @@ func TestEmailBodyEncode(t *testing.T) {
 	hasher := sha256.New()
 	hasher.Write([]byte(emailBody))
 	bodyHash := hasher.Sum(nil)
-	fmt.Println("body: ", emailBody)
-	fmt.Println("bodyHash:", bodyHash)
-	//dynamic length, big endian complement forward0x00...
-	/*	temp := []byte{0x00, 0x00, 0x00, 0x00}
-		temp = append(temp, textPrex...)*/
 	circuit := EmailBodyEncodeWrapper{
 		Body: EmailBody{
 			PrefixContent: BytesToFixPadding([]byte(textPrex), false, len([]byte(textPrex))),

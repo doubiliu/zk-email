@@ -76,6 +76,25 @@ func isSignatureHeader(header string) bool {
 	return strings.HasPrefix(strings.ToLower(header), dkimPrefix)
 }
 
+var toPrefix = "to:"
+var fromPrefix = "from:"
+
+func isToHeader(header string) bool {
+	return strings.HasPrefix(strings.ToLower(header), toPrefix)
+}
+
+func IsToHeader(header string) bool {
+	return isToHeader(header)
+}
+
+func isFromHeader(header string) bool {
+	return strings.HasPrefix(strings.ToLower(header), fromPrefix)
+}
+
+func IsFromHeader(header string) bool {
+	return isFromHeader(header)
+}
+
 func ParseSignature(header string) (*Signature, error) {
 	return parseSignature(header)
 }

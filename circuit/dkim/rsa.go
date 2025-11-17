@@ -1,6 +1,7 @@
 package dkim
 
 import (
+	"errors"
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/std/math/emulated"
 )
@@ -29,7 +30,7 @@ func (rsa *RSA[T]) VerifyPkcs1v15(pubKey *PublicKey[T], sign, hashed []frontend.
 	}
 	if len(em) < len(expected) {
 		// Impossible case, otherwise the pub.N has an overflow when input
-		panic("em overflow")
+		return errors.New("em overflow")
 	}
 	for i := 0; i < len(expected); i++ {
 		rsa.api.AssertIsEqual(em[i], expected[i])

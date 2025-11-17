@@ -2,7 +2,9 @@ package dkim
 
 import (
 	"errors"
+	"github.com/containerd/containerd/pkg/hasher"
 	"slices"
+	"strings"
 
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/std/math/bits"
@@ -63,4 +65,16 @@ func BytesToFixPadding(src []byte, isLittleEndian bool, maxLength int) PaddingSl
 		Slice:          BytesToFrontVariable(resultArray),
 		IsLittleEndian: isLittleEndian,
 	}
+}
+
+func GetHash(params ...[]byte) []byte {
+	sha256 := hasher.NewSHA256()
+	for i := 0; i < len(params); i++ {
+		sha256.Write(params[i])
+	}
+	return sha256.Sum(nil)
+}
+
+func FixupNewlines(s string) string {
+	return strings.Replace(s, "\n", "\r\n", -1)
 }

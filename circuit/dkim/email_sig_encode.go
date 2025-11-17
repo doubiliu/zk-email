@@ -7,6 +7,7 @@ import (
 type EmailSig struct {
 	SigPrefix  PaddingSlice
 	BodyHash   [32]frontend.Variable
+	SigSuffix  PaddingSlice
 	SigContent []frontend.Variable
 }
 
@@ -22,19 +23,14 @@ func (es EmailSigEncode) GetTrimmedHeader(sig EmailSig) (PaddingSlice, error) {
 	api := es.api
 	b64encoder := NewBase64Encode(api)
 	boyHashinB64 := b64encoder.EncodeRule2(sig.BodyHash[:])
-	suffixString := []byte("; b=")
-	suffixData := make([]frontend.Variable, len(suffixString))
-	for i := range suffixData {
-		suffixData[i] = frontend.Variable(suffixString[i])
-	}
-	tempData := append(boyHashinB64, suffixData...)
 	tempSlice := PaddingSlice{
 		IsLittleEndian: false,
 		Padding:        frontend.Variable(-1),
-		Slice:          tempData,
+		Slice:          boyHashinB64,
 	}
 	sliceApi := NewSliceApi(api)
-	//make email sig dynamic slice
-	resultSlice := sliceApi.concat(sig.SigPrefix, tempSlice, tempSlice.IsLittleEndian)
+	resultSlice := sliceApi.New(api, make([]frontend.Variable, 0), false)
+	resultSlice = sliceApi.concat(sig.SigPrefix, tempSlice, resultSlice.IsLittleEndian)
+	resultSlice = sliceApi.concat(resultSlice, sig.SigSuffix, resultSlice.IsLittleEndian)
 	return resultSlice, nil
 }
