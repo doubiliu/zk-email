@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/bane-labs/dbft-verifier/algorithm"
+	"github.com/bane-labs/dbft-verifier/mpc"
 	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark/backend"
 	"github.com/consensys/gnark/backend/groth16"
@@ -17,6 +18,7 @@ import (
 	"github.com/consensys/gnark/test"
 	"github.com/containerd/containerd/pkg/hasher"
 	"math/big"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -469,3 +471,30 @@ func TestTemp(t *testing.T) {
 }
 
 var headOnly2 = fixupNewlines("From: Reddit <noreply@redditmail.com>\nTo: liumengyu0930@gmail.com\nSubject: \"What do I do in this position?\"\nMIME-Version: 1.0\nContent-Type: text/html; charset=UTF-8\nContent-Transfer-Encoding: 7bit\nMessage-ID: <0100018a0530c62f-2e703fc5-2678-4834-9c12-f38e02a666aa-000000@email.amazonses.com>\nDate: Thu, 17 Aug 2023 20:29:57 +0000\nDKIM-Signature: v=1; a=rsa-sha256; q=dns/txt; c=relaxed/simple; s=xilmjaesmk3m6dhldmzc75r7654i2ch4; d=redditmail.com; t=1692304197; h=From:To:Subject:MIME-Version:Content-Type:Content-Transfer-Encoding:Message-ID:Date; bh=+D602nP4NifkpYu48HSrNmgylr5W5itqRmQ8F+3/1eQ=; b=Whynv5UIqHB5K3jtELbIGwDMyiomSBucmRVlRx4yGrGUKzBSwhMPvKHTZHex1TkW /8113aEEoolqlXP1JllwwAIqDvNPpyqHT6CBdiw/0sHDyemvOHYL482A8BkFqyU34PL v15rdBW+5TjEsFqhoVJfWDDPD2642ZkzaRxqgMqQ=")
+
+func TestTemp3(t *testing.T) {
+	currentWd, err := os.Getwd()
+	if err != nil {
+		panic(err)
+	}
+	rsaPuKey, err := os.ReadFile(currentWd + "\\testRsaPubKey.txt")
+	if err != nil {
+		panic(err)
+	}
+	rsaPuKeyStr := string(rsaPuKey)
+	txt, err := client.LookupTxt("20230601._domainkey.gmail.com.")
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("rsaPuKey", rsaPuKeyStr)
+	fmt.Println("rsaPuKey", txt[0])
+	dkimData, err := mpc.ReadFile(currentWd + "\\testDkimData.txt")
+	if err != nil {
+		panic(err)
+	}
+	dkimDataStr := dkimData
+	fmt.Println("-----------------")
+	fmt.Println([]byte(dkimDataStr))
+	fmt.Println("-----------------")
+	fmt.Println([]byte(GmailTestData))
+}

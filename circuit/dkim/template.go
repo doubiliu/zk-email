@@ -54,10 +54,3 @@ To: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 Subject: xxxxxxxxxxxxxxx
 Date: xxx, xx xxx xxxx xx:xx:xx +xxxx (xxx)
 dkim-signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=foxmail.com; s=xxxxxxxxxx; t=xxxxxxxxxx; bh=puPE4wrCV5YcrcfuFwepbL9s4gzEO/Omu6K0zc+lG5k=; h=From:To:Subject:Date; b=puBeLAmUrZcLTca/kAoDQaW1lUTidBFWtU5oEwIA3dJoeF/8wol9exglsHJFq58budhpmES0VTMpCr4v3rb4TH0gJ+r/Z3k1009nMQlBh3gTWJAG6LUgvXDxlQQBZRM4NlhrgenWw7yebQlbltmOfdY3Uy/mkiidj8fMNEfI3I4=`)
-
-//主题限制15字符
-//to from 地址都80字符
-//日期时间戳 37字符
-//选择器 10字符
-//messige-id 60字符
-//// https://www.appmaildev.com/site/testfile/dkim?lang=en
