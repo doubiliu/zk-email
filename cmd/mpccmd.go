@@ -156,27 +156,22 @@ will convert Phase1 data to common srs,each participant can execute this operati
 			phase1, and later can be used by this application repeatedly.`,
 				Subcommands: []*cli.Command{
 					{
-						Name:  "init",
-						Usage: "Generate the first phase2 file",
-						Subcommands: []*cli.Command{
-							{
-								Name:   "init",
-								Action: initCircuitPhase2,
-								Flags: []cli.Flag{
-									mailFlag,
-									srsFileFlag,
-									outputFileFlag,
-								},
-								Description: `
-				phase2 init --mailFlag <type> --srsfile <filepath> --output <filepath>
+						Name:   "init",
+						Action: initCircuitPhase2,
+						Flags: []cli.Flag{
+							mailFlag,
+							srsFileFlag,
+							outputFileFlag,
+							ccsFileFlag,
+						},
+						Description: `
+				phase2 init --mailType <type> --srsfile <filepath> --output <filepath> --ccs <filepath>
 			
 			will generate a phase2 file with a phase1 input, should be used by
 			the first participant to generate the first file. A parameter "batch"
 			is required by circuit definition, which depends on the amount of
 			input message, please refer
 			https://github.com/bane-labs/zk-dkg/blob/v0.1.0/circuit/batch_encryption.go#L33`,
-							},
-						},
 					},
 					{
 						Name:   "verify",
@@ -202,7 +197,7 @@ will convert Phase1 data to common srs,each participant can execute this operati
 							outputFileFlag,
 						},
 						Description: `
-				phase2 contribute --phase2file <filepath> --output <filepath>
+				phase2 contribute --input <filepath> --output <filepath>
 			
 			will generate a new phase2 file based on the input one, every
 			participant should do this only once and one by one, so that a
@@ -223,7 +218,7 @@ will convert Phase1 data to common srs,each participant can execute this operati
 				},
 				Action: sealCircuit,
 				Description: `
-				seal --batch <size> --srsfile <filepath> --phase2file <filepath> --contract <filepath> --provingkey <filepath> --verifyingkey <filepath> --r1cs <filepath>
+				seal --srs <filepath> --input <filepath> --contract <filepath> --pk <filepath> --vk <filepath> --ccs <filepath>
 			
 			will generate a proving key file, a verifying key file, and a
 			Solidity verifier contract based on the input MPC phase1 and
@@ -244,8 +239,7 @@ will convert Phase1 data to common srs,each participant can execute this operati
 				},
 				Action: provingProof,
 				Description: `
-				proof --provingkey <filepath> --verifyingkey <filepath> --r1cs <filepath> --mailType <type> --rsaPuKeyFileFlag <filepath> --dkimDataFileFlag <filepath>
-			
+				proof --pk <filepath> --vk <filepath> --ccs <filepath> --mailType gmail --rsaPuKey <filepath> --dkimData <filepath>
 			will generate a zk proof`,
 			},
 		},
@@ -303,13 +297,12 @@ func provingProof(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-
-	var c frontend.Circuit
-	c, err = dkim.GetCustomDKIMVerifierWrapper(mailType)
+	var circuit frontend.Circuit
+	circuit, err = dkim.GetCustomDKIMVerifierWrapper(mailType)
 	if err != nil {
 		return err
 	}
-	assignment, err := new(dkim.CustomDKIMVerifierWrapper[emparams.Mod1e4096]).Assignment(dkimData, rsaPuKey, *c.(*dkim.CustomDKIMVerifierWrapper[emparams.Mod1e4096]))
+	assignment, err := new(dkim.CustomDKIMVerifierWrapper[emparams.Mod1e4096]).Assignment(dkimData, rsaPuKey, *circuit.(*dkim.CustomDKIMVerifierWrapper[emparams.Mod1e4096]))
 	if err != nil {
 		return err
 	}
@@ -338,9 +331,9 @@ func sealCircuit(ctx *cli.Context) error {
 		return errors.New("invalid verifyingkey file path")
 	}
 	contractFilePath := ctx.Path(contractFileFlag.Name)
-	//if contractFilePath == "" {
-	//	return errors.New("invalid contract file path")
-	//}
+	if contractFilePath == "" {
+		return errors.New("invalid contract file path")
+	}
 	r1csFilePath := ctx.Path(ccsFileFlag.Name)
 	if r1csFilePath == "" {
 		return errors.New("invalid r1cs file path")
@@ -374,7 +367,7 @@ func sealCircuit(ctx *cli.Context) error {
 }
 
 func initCircuitPhase2(ctx *cli.Context) error {
-	mailType := ctx.Path(mailFlag.Name)
+	mailType := ctx.String(mailFlag.Name)
 	if mailType == "" {
 		return errors.New("invalid mail type")
 	}
