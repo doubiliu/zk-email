@@ -5,6 +5,9 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"math"
+	"os"
+
 	"github.com/bane-labs/dbft-verifier/circuit/dkim"
 	"github.com/bane-labs/dbft-verifier/mpc"
 	"github.com/consensys/gnark-crypto/ecc"
@@ -12,10 +15,7 @@ import (
 	_ "github.com/consensys/gnark/constraint"
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/frontend/cs/r1cs"
-	"github.com/consensys/gnark/std/math/emulated/emparams"
 	"github.com/urfave/cli/v2"
-	"math"
-	"os"
 )
 
 var (
@@ -165,13 +165,10 @@ will convert Phase1 data to common srs,each participant can execute this operati
 							ccsFileFlag,
 						},
 						Description: `
-				phase2 init --mailType <type> --srsfile <filepath> --output <filepath> --ccs <filepath>
+				phase2 init --mailType <string> --srsfile <filepath> --output <filepath> --ccs <filepath>
 			
 			will generate a phase2 file with a phase1 input, should be used by
-			the first participant to generate the first file. A parameter "batch"
-			is required by circuit definition, which depends on the amount of
-			input message, please refer
-			https://github.com/bane-labs/zk-dkg/blob/v0.1.0/circuit/batch_encryption.go#L33`,
+			the first participant to generate the first file.`,
 					},
 					{
 						Name:   "verify",
@@ -222,9 +219,7 @@ will convert Phase1 data to common srs,each participant can execute this operati
 			
 			will generate a proving key file, a verifying key file, and a
 			Solidity verifier contract based on the input MPC phase1 and
-			phase2 files, the same parameter "batch" used in "phase2 init"
-			should also be provided, please refer
-			https://github.com/bane-labs/zk-dkg/blob/v0.1.0/circuit/batch_encryption.go#L33.`,
+			phase2 files.`,
 			},
 			{
 				Name:  "proof",
@@ -239,7 +234,7 @@ will convert Phase1 data to common srs,each participant can execute this operati
 				},
 				Action: provingProof,
 				Description: `
-				proof --pk <filepath> --vk <filepath> --ccs <filepath> --mailType gmail --rsaPuKey <filepath> --dkimData <filepath>
+				proof --pk <filepath> --vk <filepath> --ccs <filepath> --mailType <string> --rsaPuKey <filepath> --dkimData <filepath>
 			will generate a zk proof`,
 			},
 		},
@@ -297,12 +292,11 @@ func provingProof(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	var circuit frontend.Circuit
-	circuit, err = dkim.GetCustomDKIMVerifierWrapper(mailType)
+	circuit, err := dkim.GetCustomDKIMVerifierWrapper(mailType)
 	if err != nil {
 		return err
 	}
-	assignment, err := new(dkim.CustomDKIMVerifierWrapper[emparams.Mod1e4096]).Assignment(dkimData, rsaPuKey, *circuit.(*dkim.CustomDKIMVerifierWrapper[emparams.Mod1e4096]))
+	assignment, err := dkim.NewAssignment(dkimData, rsaPuKey, circuit)
 	if err != nil {
 		return err
 	}
@@ -383,7 +377,6 @@ func initCircuitPhase2(ctx *cli.Context) error {
 	if ccsPath == "" {
 		return errors.New("invalid ccsFile path")
 	}
-	var c frontend.Circuit
 	c, err := dkim.GetCustomDKIMVerifierWrapper(mailType)
 	if err != nil {
 		return err
@@ -398,7 +391,7 @@ func initCircuitPhase2(ctx *cli.Context) error {
 	}
 	sha := sha256.New()
 	if _, err := p.WriteTo(sha); err != nil {
-		panic(err)
+		return err
 	}
 	fmt.Println("File challenge:", hex.EncodeToString(sha.Sum(nil)))
 	return nil
@@ -438,7 +431,7 @@ func contributePhase2(ctx *cli.Context) error {
 	fmt.Println("Contributed to:", hex.EncodeToString(p.Challenge))
 	sha := sha256.New()
 	if _, err := p.WriteTo(sha); err != nil {
-		panic(err)
+		return err
 	}
 	fmt.Println("File challenge:", hex.EncodeToString(sha.Sum(nil)))
 	return nil
@@ -457,7 +450,7 @@ func initPhase1(ctx *cli.Context) error {
 	fmt.Printf("Phase1 SRS File initials successfully, fft domain size: 2^%d\n", domain)
 	sha := sha256.New()
 	if _, err := p.WriteTo(sha); err != nil {
-		panic(err)
+		return err
 	}
 	fmt.Println("File challenge:", hex.EncodeToString(sha.Sum(nil)))
 	return nil
@@ -498,7 +491,7 @@ func contributePhase1(ctx *cli.Context) error {
 	fmt.Println("Contributed to:", hex.EncodeToString(p.Challenge))
 	sha := sha256.New()
 	if _, err := p.WriteTo(sha); err != nil {
-		panic(err)
+		return err
 	}
 	fmt.Println("File challenge:", hex.EncodeToString(sha.Sum(nil)))
 	return nil

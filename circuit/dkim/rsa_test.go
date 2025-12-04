@@ -23,7 +23,7 @@ func TestRSACircuit(t *testing.T) {
 		panic(err)
 	}
 	data := []byte("foo")
-	// Using SHA256 to hash msg and then use rsa private key to Sign.
+	// Use SHA256 to hash msg and then use rsa private key to Sign.
 	sig, err := algorithm.RsaSign(prvkey, crypto.SHA256, data)
 	if err != nil {
 		panic(err)
@@ -31,7 +31,7 @@ func TestRSACircuit(t *testing.T) {
 	if len(sig) != 2048/8 {
 		panic("signature len not equal to key length")
 	}
-	// Using public key to verify signature.
+	// Use public key to verify signature.
 	err = algorithm.RsaVerifySign(pubkey, crypto.SHA256, data, sig)
 	if err != nil {
 		panic(err)
@@ -77,7 +77,7 @@ type RSAWrapper[T emulated.FieldParams] struct {
 	Hashed    []frontend.Variable
 }
 
-// Define declares the circuit's constraints
+// Define declares the circuit's constraints.
 func (c *RSAWrapper[T]) Define(api frontend.API) error {
 	rsa := NewRSA[T](api)
 	err := rsa.VerifyPkcs1v15(c.PublicKey, c.Sign, c.Hashed)

@@ -10,8 +10,7 @@ import (
 	"github.com/consensys/gnark/std/selector"
 )
 
-// SliceApi is used for some operations on undetermined slice
-// in little-endian
+// SliceApi is used for some operations on undetermined slice in little-endian.
 type SliceApi struct {
 	api frontend.API
 }
@@ -55,8 +54,8 @@ func (c *SliceApi) newBigEndian(api frontend.API, in []frontend.Variable) Paddin
 	return p
 }
 
-// AssertIsZero check all variables in slice is 0
-// no matter whether big or little-endian is set
+// AssertIsZero check all variables in slice is 0,
+// no matter whether big or little-endian is set.
 func (c *SliceApi) AssertIsZero(slice []frontend.Variable) {
 	api := c.api
 	for i := 0; i < len(slice); i++ {
@@ -64,11 +63,9 @@ func (c *SliceApi) AssertIsZero(slice []frontend.Variable) {
 	}
 }
 
-// AssertIsSame check a[i] = b[i] for all i
-// in little-endian, we check:
-// when len(a) != len(b), we check a[:minLen] = b[:minLen] and a[minLen:] = 0, b[minLen:] = 0
-// hint: here a and b should fix its length, otherwise the circuit will change
-
+// AssertIsSame check a[i] = b[i] for all i in little-endian.
+// When len(a) != len(b), we check a[:minLen] = b[:minLen] and a[minLen:] = 0, b[minLen:] = 0.
+// hint: here a and b should fix its length, otherwise the circuit will change.
 func (c *SliceApi) AssertIsSame(a []frontend.Variable, b []frontend.Variable) {
 	api := c.api
 	minLen := min(len(a), len(b))
@@ -83,6 +80,7 @@ func (c *SliceApi) AssertIsSame(a []frontend.Variable, b []frontend.Variable) {
 	}
 
 }
+
 func (c *SliceApi) Zeros(length int) []frontend.Variable {
 	zeros := make([]frontend.Variable, length)
 	for i := 0; i < len(zeros); i++ {
@@ -91,7 +89,7 @@ func (c *SliceApi) Zeros(length int) []frontend.Variable {
 	return zeros
 }
 
-// RightShift a = [a1, a2, ... ,an] -> [0, 0, ... 0, a1, a2, .. a_{n - shift}]
+// RightShift a = [a1, a2, ... ,an] -> [0, 0, ... 0, a1, a2, .. a_{n - shift}].
 func (c *SliceApi) RightShift(a []frontend.Variable, shift frontend.Variable) []frontend.Variable {
 	api := c.api
 	result := c.Zeros(len(a))
@@ -113,8 +111,7 @@ func (c *SliceApi) RightShift(a []frontend.Variable, shift frontend.Variable) []
 	return result
 }
 
-// LefttShift a = [a1, a2, .., an] -> [a_{shift}, ...an, 0, 0, 0, 0...]
-
+// LefttShift a = [a1, a2, .., an] -> [a_{shift}, ...an, 0, 0, 0, 0...].
 func (c *SliceApi) LeftShift(a []frontend.Variable, shift frontend.Variable) []frontend.Variable {
 	reverse := make([]frontend.Variable, len(a))
 	copy(reverse[:], a[:])
@@ -124,11 +121,10 @@ func (c *SliceApi) LeftShift(a []frontend.Variable, shift frontend.Variable) []f
 	return rightShift
 }
 
-// Concat
-// in little-endian, [s, 0...0] concat [a, 0...0] -> [a, s, 0...0]
-// in big-endian, [0...0, s] concat [0...0, a] -> [0...0, s, a]
-// result = [s,a,0,0,0]
-// hint: that is isInPaddingSide = false
+// Concat.
+// in little-endian, [s, 0...0] concat [a, 0...0] -> [a, s, 0...0].
+// in big-endian, [0...0, s] concat [0...0, a] -> [0...0, s, a].
+// hint: result = [s, a, 0, 0, 0] is because isInPaddingSide = false.
 func (c *SliceApi) Concat(isLittle bool, slices ...PaddingSlice) PaddingSlice {
 	if len(slices) < 2 {
 		panic("slices must have at least two elements")
@@ -142,7 +138,7 @@ func (c *SliceApi) Concat(isLittle bool, slices ...PaddingSlice) PaddingSlice {
 func (c *SliceApi) concat(s PaddingSlice, a PaddingSlice, isLittle bool) PaddingSlice {
 	api := c.api
 	concat := make([]frontend.Variable, len(a.Slice)+len(s.Slice)) // total length
-	// we use little-endian
+	// We use little endian.
 	sCopy := s.Clone()
 	if !sCopy.IsLittleEndian {
 		sCopy = sCopy.Reverse(api)
@@ -152,15 +148,15 @@ func (c *SliceApi) concat(s PaddingSlice, a PaddingSlice, isLittle bool) Padding
 	if !aCopy.IsLittleEndian {
 		aCopy = aCopy.Reverse(api)
 	}
-	// [a, s, 0...0]
+	// [a, s, 0...0].
 	for i := 0; i < len(concat); i++ {
 		concat[i] = 0
 	}
 	concatPadding := api.Add(sCopy.Padding, aCopy.Padding)
-	// we pad s and a
+	// Pad s and a.
 	sCopy = sCopy.PaddingWithZero(api, len(concat))
 	aCopy = aCopy.PaddingWithZero(api, len(concat))
-	// then we right shift sCopy, shift = a.Len()
+	// Then right shift sCopy, shift = a.Len().
 	sApi := NewSliceApi(api)
 	shiftSlice := sApi.RightShift(sCopy.Slice, aCopy.Len(api)) // [0...0, s, 0...0]
 	for i := 0; i < len(concat); i++ {
@@ -178,12 +174,11 @@ func (c *SliceApi) concat(s PaddingSlice, a PaddingSlice, isLittle bool) Padding
 }
 
 // Append appends a into s, where isLittle is whether the little or big-endian of a is given, isInPaddingSide is the position to insert
-// e.g. in little-endian s = [s, 0,0,0...] -> [a, s, 0, 0,...], when isInPaddingSide = false, else -> [s, a, 0...0]
-// in big-endian s = [0,0,0..., s] -> [0,0,0, s, a] when isInPaddingSide = false, else -> [0...0, a, s]
+// e.g. in little-endian s = [s, 0, 0, 0...] -> [a, s, 0, 0,...], when isInPaddingSide = false, else -> [s, a, 0...0],
+// in big-endian s = [0, 0, 0..., s] -> [0, 0, 0, s, a] when isInPaddingSide = false, else -> [0...0, a, s].
 // hint: a will be treated as a no-padding-0 slice
 func (c *SliceApi) Append(s PaddingSlice, a []frontend.Variable, isLittle bool, isInPaddingSide bool) PaddingSlice {
-	// we use little-endian
-
+	// We use little endian.
 	aCopy := make([]frontend.Variable, len(a))
 	copy(aCopy[:], a[:])
 	if !isLittle {
@@ -203,9 +198,9 @@ func (c *SliceApi) Append(s PaddingSlice, a []frontend.Variable, isLittle bool, 
 
 // CheckConcat provides a method to verify concat = connect all the slice in slices
 // in little-endian, the logic is:
-// [i1...0] [i2...0] [i3...0] -> [i1,i2,i3,0,...,0], i1,i2,i3 is a slice with no suffix-0
+// [i1...0] [i2...0] [i3...0] -> [i1, i2, i3, 0, ..., 0], i1, i2, i3 is a slice with no suffix-0.
 // Hint: when use this function, each slice's length and concat's length should be fixed, otherwise the circuit will change
-// in big-endian, we reverse the input
+// in big-endian, we reverse the input.
 func (c *SliceApi) CheckConcat(concat PaddingSlice, slices ...PaddingSlice) error {
 	api := c.api
 	littleConcat := concat.Clone()
@@ -222,6 +217,7 @@ func (c *SliceApi) CheckConcat(concat PaddingSlice, slices ...PaddingSlice) erro
 	}
 	return c.checkConcatInLittleEndian(littleConcat, littleSlices...)
 }
+
 func (c *SliceApi) checkConcatInLittleEndian(concat PaddingSlice, slices ...PaddingSlice) error {
 	if len(slices) == 0 {
 		return fmt.Errorf("len(slices) = 0")
@@ -235,8 +231,8 @@ func (c *SliceApi) checkConcatInLittleEndian(concat PaddingSlice, slices ...Padd
 	}
 	api.AssertIsEqual(length, len(concat.Slice))
 	// len = len(slices) + 1
-	partitions := make([]frontend.Variable, len(slices)+1) // [0, partition_0) is slice_0, [partition_0, partition_1) is slice_1, ...[partition_{n-1}, partition_{n}] is 0, partition_n = len(concat)
-	// compute partition_0 ~ partition_{n}
+	partitions := make([]frontend.Variable, len(slices)+1) // [0, partition_0) is slice_0, [partition_0, partition_1) is slice_1, ...[partition_{n-1}, partition_{n}] is 0, partition_n = len(concat).
+	// Compute partition_0 ~ partition_{n}.
 	// partition_{n} = len(slices)
 	partitions[len(partitions)-1] = len(concat.Slice)
 	partitions[0] = slices[0].Padding // partition_0 = slice_0.Padding
@@ -249,7 +245,7 @@ func (c *SliceApi) checkConcatInLittleEndian(concat PaddingSlice, slices ...Padd
 		partitions[i] = api.Add(lastNum, slices[len(slices)-1-i].Padding)
 	}
 	api.AssertIsEqual(partitions[len(partitions)-1], length)
-	// check concat[partition_{n - 1}, partition_n) is 0
+	// Check concat[partition_{n - 1}, partition_n) is 0.
 	c.AssertIsZero(selector.Slice(api, partitions[len(partitions)-2], partitions[len(partitions)-1], concat.Slice))
 	for i := 0; i < len(slices); i++ {
 		var left, right frontend.Variable
@@ -267,7 +263,7 @@ func (c *SliceApi) checkConcatInLittleEndian(concat PaddingSlice, slices ...Padd
 }
 
 // PaddingSlice is a slice padding with suffix 0 (e.g. little-endian)
-// e.g. 3(in u8) = [1,1,0,0,0,0,0,0], padding = 2
+// e.g. 3(in u8) = [1, 1, 0, 0, 0, 0, 0, 0], padding = 2
 //
 //	Padding is the latest not-0 position, slice[padding + 1:] = 0
 type PaddingSlice struct {
@@ -286,7 +282,7 @@ func (s *PaddingSlice) Clone() PaddingSlice {
 	}
 }
 
-// Reverse transforms a little/big-endian to big/little endian
+// Reverse transforms a little/big-endian to big/little endian.
 func (s *PaddingSlice) Reverse(api frontend.API) PaddingSlice {
 	newPadding := api.Sub(len(s.Slice)-1, s.Padding)
 	newSlice := make([]frontend.Variable, len(s.Slice))
@@ -298,12 +294,14 @@ func (s *PaddingSlice) Reverse(api frontend.API) PaddingSlice {
 		IsLittleEndian: !s.IsLittleEndian,
 	}
 }
+
 func (s *PaddingSlice) Last() frontend.Variable {
 	if s.IsLittleEndian {
 		return s.Slice[0]
 	}
 	return s.Slice[len(s.Slice)-1]
 }
+
 func (s *PaddingSlice) PaddingWithZero(api frontend.API, length int) PaddingSlice {
 	paddingLength := length - len(s.Slice) // zero number
 	sCopy := s.Clone()
@@ -379,7 +377,7 @@ func (s *PaddingSlice) GetSliceHash(api frontend.API) ([]frontend.Variable, erro
 	return resultHash, nil
 }
 
-//// Check confirms that the padding is the correct position
+//// Check confirms that the padding is the correct position.
 //phase (s *PaddingSlice) Check(api frontend.API) {
 //	toCheck := s.Clone()
 //	if !s.IsLittleEndian {

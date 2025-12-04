@@ -6,8 +6,15 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"math/big"
+	"os"
+	"strings"
+	"testing"
+	"time"
+
 	"github.com/bane-labs/dbft-verifier/algorithm"
 	"github.com/bane-labs/dbft-verifier/mpc"
+	"github.com/bane-labs/dbft-verifier/utils"
 	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark/backend"
 	"github.com/consensys/gnark/backend/groth16"
@@ -17,14 +24,9 @@ import (
 	"github.com/consensys/gnark/std/math/emulated/emparams"
 	"github.com/consensys/gnark/test"
 	"github.com/containerd/containerd/pkg/hasher"
-	"math/big"
-	"os"
-	"strings"
-	"testing"
-	"time"
 )
 
-var GmailTestData = FixupNewlines(`to:Shili Hu <799498265@qq.com>
+var GmailTestData = utils.FixupNewlines(`to:Shili Hu <799498265@qq.com>
 subject:Test
 message-id:<CAM1mABt3Ds8Fh7siVUDBg89ejujDu6iRA4xg6zCQEygfHhCgqw@mail.gmail.com>
 date:Fri, 7 Nov 2025 17:36:42 +0800
@@ -42,7 +44,7 @@ DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
          FioIk9ArYy79wYUPka3OZ4Xu4okl9vmznBakrYev2yPFdyGoERtZcStiBnUNu290cdeN
          8a6A==`)
 
-var NGDTestData = FixupNewlines(`To: foxsama0315@gmail.com
+var NGDTestData = utils.FixupNewlines(`To: foxsama0315@gmail.com
 From: =?utf-8?B?6IOh5LiW5Yqb?= <teumessian@icloud.com>
 Subject: Test
 Date: Thu, 30 Oct 2025 03:17:50 +0000 (GMT)
@@ -52,7 +54,7 @@ MIME-Version: 1.0
 Dkim-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=icloud.com; s=1a1hai; bh=ezxyzBzRGSBXS5S4lWvXBCnLY6s83Ja07W1HwKIi4fQ=; h=To:From:Subject:Date:Message-id:Content-Type:MIME-Version:x-icloud-hme; b=gmuFpMQyDOF03EDvmmN2USYrlaASH8Z6hlkd90U7P5/83hGrUs2CEPgQfQWLnSOu9WBNPEx71KFrUY/wyZTJemmrlVjKGZtH74w3hlZV0eosltCfDc07cteVs3k0CImxWokRQlnpzUmI7PZRFhAUXuDX1PbQ1TuFm+onlDd1XAIDSfG4fnGdNdfK23estXJDCJhms7vFQzDX5Fv99LT3a/wi/9w1vV2AtMSiRO55PO1d6EFck0z1+G0o21+iQOpC3PkaPB2xru50QrKKKa4AfNqtCSvLiTHY20bDWHMKGY0292dHMSmF3r9T9PGMMGP3DmnmZfv/tTu+/a00MO9jtg==
 `)
 
-var OutLookTestData = FixupNewlines(`From: mengyu <mengyu@neo.link>
+var OutLookTestData = utils.FixupNewlines(`From: mengyu <mengyu@neo.link>
 Date: Fri, 7 Nov 2025 07:14:53 +0000
 Subject: Test dk
 Message-ID: <PSAPR03MB527104A6E1E590D927033F1ABDC3A@PSAPR03MB5271.apcprd03.prod.outlook.com>
@@ -61,7 +63,7 @@ MIME-Version: 1.0
 x-ms-exchange-senderadcheck: 1
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=neo.link; s=selector1; h=From:Date:Subject:Message-ID:Content-Type:MIME-Version:X-MS-Exchange-SenderADCheck; bh=GGsDC64gLwrxyhYYdbSXAU59KMqyyAQCWjIk7sn+QVo=; b=fCYL+eOzOO0xNLZsZbjaa6lo++gu0ETc67ivaFD48ZLxX8i5Aq9SklhSSIo4S889yWQ0h203A+yVW9bihnW2wohnXW00UzhK2w/XnVANW0KlerWfIhJ447UOoQ5Bk/P9XfUSWszu1R9FU7UJIYJEHD8IGvGPpHeOJQRQ/u0VQ8MliqPgtEo3OVLw1odSNSX/Tukoke8/o1tikxWrcGMYhm+L6Q0KUMg6oPkp+GN4bXZEabKkfGpEQ5/ZnphWlHVKVd3d326QPlZXUBd7smfODnU9VfvmroI9uWcrg/FKCofooSKqSL4TH/W9Rj8Yc/TkZt3aHFZBja4J23NHp0mMaA==`)
 
-var ICloudTestData = FixupNewlines(`To: foxsama0315@gmail.com
+var ICloudTestData = utils.FixupNewlines(`To: foxsama0315@gmail.com
 From: =?utf-8?B?6IOh5LiW5Yqb?= <teumessian@icloud.com>
 Subject: Test
 Date: Thu, 30 Oct 2025 03:17:50 +0000 (GMT)
@@ -71,13 +73,13 @@ MIME-Version: 1.0
 Dkim-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=icloud.com; s=1a1hai; bh=ezxyzBzRGSBXS5S4lWvXBCnLY6s83Ja07W1HwKIi4fQ=; h=To:From:Subject:Date:Message-id:Content-Type:MIME-Version:x-icloud-hme; b=gmuFpMQyDOF03EDvmmN2USYrlaASH8Z6hlkd90U7P5/83hGrUs2CEPgQfQWLnSOu9WBNPEx71KFrUY/wyZTJemmrlVjKGZtH74w3hlZV0eosltCfDc07cteVs3k0CImxWokRQlnpzUmI7PZRFhAUXuDX1PbQ1TuFm+onlDd1XAIDSfG4fnGdNdfK23estXJDCJhms7vFQzDX5Fv99LT3a/wi/9w1vV2AtMSiRO55PO1d6EFck0z1+G0o21+iQOpC3PkaPB2xru50QrKKKa4AfNqtCSvLiTHY20bDWHMKGY0292dHMSmF3r9T9PGMMGP3DmnmZfv/tTu+/a00MO9jtg==
 `)
 
-var FoxmailTestData = FixupNewlines(`From: "=?utf-8?B?c3RyaW5nIExWPeKAnOaaluWGsOKAnQ==?=" <jinghui.liao@foxmail.com>
+var FoxmailTestData = utils.FixupNewlines(`From: "=?utf-8?B?c3RyaW5nIExWPeKAnOaaluWGsOKAnQ==?=" <jinghui.liao@foxmail.com>
 To: "=?utf-8?B?bGl1bWVuZ3l1MDkzMA==?=" <liumengyu0930@gmail.com>
 Subject: zkemail test
 Date: Tue, 4 Nov 2025 16:28:38 +0800
 dkim-signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=foxmail.com; s=s201512; t=1762244918; bh=puPE4wrCV5YcrcfuFwepbL9s4gzEO/Omu6K0zc+lG5k=; h=From:To:Subject:Date; b=puBeLAmUrZcLTca/kAoDQaW1lUTidBFWtU5oEwIA3dJoeF/8wol9exglsHJFq58budhpmES0VTMpCr4v3rb4TH0gJ+r/Z3k1009nMQlBh3gTWJAG6LUgvXDxlQQBZRM4NlhrgenWw7yebQlbltmOfdY3Uy/mkiidj8fMNEfI3I4=`)
 
-var headersOnly = fixupNewlines(`mime-version:1.0
+var headersOnly = utils.FixupNewlines(`mime-version:1.0
 from:Jelle van den Hooff <jelle@vandenhooff.name>
 date:Sun, 29 Mar 2015 22:39:03 -0400
 message-id:<CAP=Jqubpoizbfg+Fb_+ycEkhqrgMBE=qozKrRubUuimQ717wKw@mail.gmail.com>
@@ -118,10 +120,6 @@ func (c *fakeDnsClient) LookupTxt(hostname string) ([]string, error) {
 	}
 }
 
-func fixupNewlines(s string) string {
-	return strings.Replace(s, "\n", "\r\n", -1)
-}
-
 func TestDKIMCircuitByCustomedHeader(t *testing.T) {
 	assert := test.NewAssert(t)
 	email := algorithm.ParseEmail(headersOnly)
@@ -150,12 +148,12 @@ func TestDKIMCircuitByCustomedHeader(t *testing.T) {
 		panic(err)
 	}
 	signedHeaders := algorithm.ExtractHeaders(email.Headers(), signature.HeaderNames())
-	//从DNS查找RSA公钥
+	// Find public key from DNS.
 	txtRecords, err := client.LookupTxt(signature.TxtRecordName())
 	if err != nil {
 		panic(err)
 	}
-	//验签
+	// Verify signature.
 	txtRecord := txtRecords[1]
 	fmt.Println("public key:" + txtRecord)
 	key := algorithm.ParsePubkey(txtRecord)
@@ -184,7 +182,7 @@ func TestDKIMCircuitByCustomedHeader(t *testing.T) {
 	for i := range bodyHash {
 		bodyHash[i] = signature.BodyHash()[i]
 	}
-	//compute publicInputHash
+	// Compute publicInputHash.
 	nBytes := pubKey.(*rsa.PublicKey).N.FillBytes(make([]byte, 512))
 	eBytes := new(big.Int).SetInt64(int64(pubKey.(*rsa.PublicKey).E)).FillBytes(make([]byte, 512))
 	fmt.Println("N bytes:", nBytes)
@@ -281,8 +279,8 @@ func TestTemp1(t *testing.T) {
 	assert := test.NewAssert(t)
 	email := algorithm.ParseEmail(GmailTestData)
 	var signatureHeader string
+	// Check and find DKIM-Signature header.
 	for _, header := range email.Headers() {
-		// headers
 		if algorithm.IsSignatureHeader(header) {
 			if signatureHeader != "" {
 				panic(errors.New("multiple DKIM headers"))
@@ -320,7 +318,7 @@ func TestTemp1(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	//验签
+	// Verify signature.
 	txtRecord := txtRecords[0]
 	fmt.Println("txt record:" + txtRecord)
 	fmt.Println("public key:" + txtRecord)
@@ -336,11 +334,11 @@ func TestTemp2(t *testing.T) {
 	var signatureHeader string
 	fromHeaderIndex := -1
 	for index, header := range email.Headers() {
-		// we don't support DKIM-Signature headers signing other DKIM-Signature
+		// We don't support DKIM-Signature headers signing other DKIM-Signature
 		if algorithm.IsFromHeader(header) {
 			fromHeaderIndex = index
 		}
-		// headers
+		// Check and find DKIM-Signature header.
 		if algorithm.IsSignatureHeader(header) {
 			if signatureHeader != "" {
 				panic(errors.New("multiple DKIM headers"))
@@ -377,18 +375,18 @@ func TestTemp2(t *testing.T) {
 	fmt.Println("header hash:")
 	fmt.Println(headersHash)
 
-	//从DNS查找RSA公钥
+	// Find public key from DNS.
 	txtRecords, err := client.LookupTxt(signature.TxtRecordName())
 	if err != nil {
 		panic(err)
 	}
-	//验签
+	// Verify signature.
 	txtRecord := txtRecords[0]
-	circuit, err := new(CustomDKIMVerifierWrapper[emparams.Mod1e4096]).Circuit(GmailTemplate, txtRecord)
+	circuit, err := newCircuit[emparams.Mod1e4096](GmailTemplate, txtRecord)
 	if err != nil {
 		panic(err)
 	}
-	assignment, err := new(CustomDKIMVerifierWrapper[emparams.Mod1e4096]).Assignment(GmailTestData, txtRecord, *circuit.(*CustomDKIMVerifierWrapper[emparams.Mod1e4096]))
+	assignment, err := NewAssignment(GmailTestData, txtRecord, circuit)
 	if err != nil {
 		panic(err)
 	}
@@ -429,11 +427,11 @@ func TestTemp(t *testing.T) {
 	var signatureHeader string
 	toHeaderIndex := -1
 	for index, header := range email.Headers() {
-		// we don't support DKIM-Signature headers signing other DKIM-Signature
+		// We don't support DKIM-Signature headers signing other DKIM-Signature
 		if algorithm.IsToHeader(header) {
 			toHeaderIndex = index
 		}
-		// headers
+		// Check and find DKIM-Signature header.
 		if algorithm.IsSignatureHeader(header) {
 			if signatureHeader != "" {
 				panic(errors.New("multiple DKIM headers"))
@@ -451,26 +449,24 @@ func TestTemp(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	//从DNS查找RSA公钥
+	// Find public key from DNS.
 	txtRecords, err := client.LookupTxt(signature.TxtRecordName())
 	if err != nil {
 		panic(err)
 	}
-	//验签
+	// Verify signature.
 	txtRecord := txtRecords[0]
-	circuit, err := new(CustomDKIMVerifierWrapper[emparams.Mod1e4096]).Circuit(headersOnly, txtRecord)
+	circuit, err := newCircuit[emparams.Mod1e4096](headersOnly, txtRecord)
 	if err != nil {
 		panic(err)
 	}
-	assignment, err := new(CustomDKIMVerifierWrapper[emparams.Mod1e4096]).Assignment(headersOnly, txtRecord, *circuit.(*CustomDKIMVerifierWrapper[emparams.Mod1e4096]))
+	assignment, err := NewAssignment(headersOnly, txtRecord, circuit)
 	if err != nil {
 		panic(err)
 	}
 	err = test.IsSolved(circuit, assignment, ecc.BN254.ScalarField())
 	assert.NoError(err)
 }
-
-var headOnly2 = fixupNewlines("From: Reddit <noreply@redditmail.com>\nTo: liumengyu0930@gmail.com\nSubject: \"What do I do in this position?\"\nMIME-Version: 1.0\nContent-Type: text/html; charset=UTF-8\nContent-Transfer-Encoding: 7bit\nMessage-ID: <0100018a0530c62f-2e703fc5-2678-4834-9c12-f38e02a666aa-000000@email.amazonses.com>\nDate: Thu, 17 Aug 2023 20:29:57 +0000\nDKIM-Signature: v=1; a=rsa-sha256; q=dns/txt; c=relaxed/simple; s=xilmjaesmk3m6dhldmzc75r7654i2ch4; d=redditmail.com; t=1692304197; h=From:To:Subject:MIME-Version:Content-Type:Content-Transfer-Encoding:Message-ID:Date; bh=+D602nP4NifkpYu48HSrNmgylr5W5itqRmQ8F+3/1eQ=; b=Whynv5UIqHB5K3jtELbIGwDMyiomSBucmRVlRx4yGrGUKzBSwhMPvKHTZHex1TkW /8113aEEoolqlXP1JllwwAIqDvNPpyqHT6CBdiw/0sHDyemvOHYL482A8BkFqyU34PL v15rdBW+5TjEsFqhoVJfWDDPD2642ZkzaRxqgMqQ=")
 
 func TestTemp3(t *testing.T) {
 	currentWd, err := os.Getwd()

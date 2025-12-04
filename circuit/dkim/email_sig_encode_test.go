@@ -40,7 +40,7 @@ func (c *EmailSigEncodeWrapper) Define(api frontend.API) error {
 
 func TestEmailSigEncode(t *testing.T) {
 	assert := test.NewAssert(t)
-	//The email sig will be split into multiple paragraphs to facilitate more flexible verification.
+	// Email sig will be split into multiple paragraphs to facilitate more flexible verification.
 	tBodyHash, err := base64.StdEncoding.DecodeString(testBodyHash)
 	if err != nil {
 		return

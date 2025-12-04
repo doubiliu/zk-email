@@ -2,15 +2,14 @@ package dkim
 
 import (
 	"errors"
-	"github.com/containerd/containerd/pkg/hasher"
 	"slices"
-	"strings"
 
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/std/math/bits"
+	"github.com/containerd/containerd/pkg/hasher"
 )
 
-// BytesToBits converts a byte array (MSB) to a Gnark bit array (LSB)
+// BytesToBits converts a byte array (MSB) to a Gnark bit array (LSB).
 func BytesToBits(api frontend.API, bytesData []frontend.Variable) []frontend.Variable {
 	bitsData := make([]frontend.Variable, 0)
 	for i := 0; i < len(bytesData); i++ {
@@ -22,7 +21,7 @@ func BytesToBits(api frontend.API, bytesData []frontend.Variable) []frontend.Var
 	return bitsData
 }
 
-// BitsToBytes converts a Gnark bit array (LSB) to a byte array (MSB)
+// BitsToBytes converts a Gnark bit array (LSB) to a byte array (MSB).
 func BitsToBytes(api frontend.API, bitsData []frontend.Variable) []frontend.Variable {
 	if len(bitsData)%8 != 0 {
 		panic("bits length is not multiple of 8")
@@ -37,6 +36,7 @@ func BitsToBytes(api frontend.API, bitsData []frontend.Variable) []frontend.Vari
 	return bytesData
 }
 
+// BytesToFrontVariable converts a byte array to a frontend.Variable array.
 func BytesToFrontVariable(src []byte) []frontend.Variable {
 	result := make([]frontend.Variable, len(src))
 	for i := range result {
@@ -45,6 +45,7 @@ func BytesToFrontVariable(src []byte) []frontend.Variable {
 	return result
 }
 
+// BytesToPadding converts a byte array to a PaddingSlice with specified padding.
 func BytesToPadding(src []byte, isLittleEndian bool, padding int) PaddingSlice {
 	return PaddingSlice{
 		Padding:        frontend.Variable(padding),
@@ -53,6 +54,7 @@ func BytesToPadding(src []byte, isLittleEndian bool, padding int) PaddingSlice {
 	}
 }
 
+// BytesToFixPadding converts a byte array to a PaddingSlice with fixed length by adding leading zeros.
 func BytesToFixPadding(src []byte, isLittleEndian bool, maxLength int) PaddingSlice {
 	if len(src) > maxLength {
 		panic(errors.New("input length exceeds max length"))
@@ -67,14 +69,11 @@ func BytesToFixPadding(src []byte, isLittleEndian bool, maxLength int) PaddingSl
 	}
 }
 
+// GetHash computes the SHA256 hash of the concatenated input byte arrays.
 func GetHash(params ...[]byte) []byte {
 	sha256 := hasher.NewSHA256()
 	for i := 0; i < len(params); i++ {
 		sha256.Write(params[i])
 	}
 	return sha256.Sum(nil)
-}
-
-func FixupNewlines(s string) string {
-	return strings.Replace(s, "\n", "\r\n", -1)
 }

@@ -33,7 +33,7 @@ type Base64Encode struct {
 	t   logderivlookup.Table
 }
 
-// original data length is evenly divisible by 6 and the remainder is 0
+// Original data length is evenly divisible by 6 and the remainder is 0.
 func (b64enc *Base64Encode) EncodeRule1(srcData []frontend.Variable) []frontend.Variable {
 	remainder := b64enc.checkRemainder(srcData, 0)
 	splitBits := b64enc.split(srcData, remainder)
@@ -41,7 +41,7 @@ func (b64enc *Base64Encode) EncodeRule1(srcData []frontend.Variable) []frontend.
 	return encodeData
 }
 
-// original data length is divided by 6 and the remainder is 4
+// Original data length is divided by 6 and the remainder is 4.
 func (b64enc *Base64Encode) EncodeRule2(srcData []frontend.Variable) []frontend.Variable {
 	remainder := b64enc.checkRemainder(srcData, 4)
 	splitBits := b64enc.split(srcData, 6-remainder)
@@ -50,7 +50,7 @@ func (b64enc *Base64Encode) EncodeRule2(srcData []frontend.Variable) []frontend.
 	return encodeData
 }
 
-// original data length is divided by 6 and the remainder is 2
+// Original data length is divided by 6 and the remainder is 2.
 func (b64enc *Base64Encode) EncodeRule3(srcData []frontend.Variable) []frontend.Variable {
 	remainder := b64enc.checkRemainder(srcData, 2)
 	splitBits := b64enc.split(srcData, 6-remainder)
@@ -61,7 +61,6 @@ func (b64enc *Base64Encode) EncodeRule3(srcData []frontend.Variable) []frontend.
 }
 
 func (b64enc *Base64Encode) encode(splitBits []frontend.Variable) []frontend.Variable {
-	api := b64enc.api
 	encodeData := make([]frontend.Variable, 0)
 	for i := 0; i < len(splitBits); i = i + 6 {
 		aggregationBits := make([]frontend.Variable, 8)
@@ -74,23 +73,22 @@ func (b64enc *Base64Encode) encode(splitBits []frontend.Variable) []frontend.Var
 		aggregationBits[6] = splitBits[i+4]
 		aggregationBits[7] = splitBits[i+5]
 		slices.Reverse(aggregationBits)
-		newData := api.FromBinary(aggregationBits...)
+		newData := b64enc.api.FromBinary(aggregationBits...)
 		vals := b64enc.t.Lookup(newData)
 		encodeData = append(encodeData, vals...)
 	}
 	return encodeData
 }
 
-// convert bytes into bits,and append padding 0
+// Convert bytes into bits, and append padding 0.
 func (b64enc *Base64Encode) split(srcData []frontend.Variable, padding int) []frontend.Variable {
-	api := b64enc.api
 	splitBits := make([]frontend.Variable, 0)
 	for i := 0; i < len(srcData); i++ {
-		bits := api.ToBinary(srcData[i], 8)
+		bits := b64enc.api.ToBinary(srcData[i], 8)
 		slices.Reverse(bits)
 		splitBits = append(splitBits, bits...)
 	}
-	//add padding 0
+	// add padding 0
 	for i := 0; i < padding; i++ {
 		splitBits = append(splitBits, frontend.Variable(0))
 	}
@@ -98,9 +96,8 @@ func (b64enc *Base64Encode) split(srcData []frontend.Variable, padding int) []fr
 }
 
 func (b64enc *Base64Encode) checkRemainder(srcData []frontend.Variable, aim frontend.Variable) int {
-	api := b64enc.api
 	srcDataLength := len(srcData)
 	remainder := (srcDataLength * 8) % 6
-	api.AssertIsEqual(aim, remainder)
+	b64enc.api.AssertIsEqual(aim, remainder)
 	return remainder
 }

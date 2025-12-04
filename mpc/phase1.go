@@ -121,6 +121,12 @@ func ReadPhase1FromFile(path string) (mpcsetup.Phase1, error) {
 	return phase1, err
 }
 
+/**
+ * Function: ReadSrsCommonsFromFile
+ * @Description: get srs common data from file
+ * @param path: file path
+ * @return srs: srs common data
+ */
 func ReadSrsCommonsFromFile(path string) (mpcsetup.SrsCommons, error) {
 	var srs mpcsetup.SrsCommons
 	f, err := os.Open(path)
