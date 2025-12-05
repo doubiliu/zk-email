@@ -4,10 +4,10 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/bane-labs/dbft-verifier/algorithm"
 	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/test"
+	"github.com/doubiliu/zk-email/algorithm"
 )
 
 type CustomEmailHeaderWrapper struct {

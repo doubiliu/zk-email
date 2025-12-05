@@ -5,8 +5,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/bane-labs/dbft-verifier/utils"
 	"github.com/consensys/gnark/backend/groth16/bn254/mpcsetup"
+	"github.com/doubiliu/zk-email/utils"
 )
 
 /**

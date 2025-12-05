@@ -3,10 +3,10 @@ package mpc
 import (
 	"os"
 
-	"github.com/bane-labs/dbft-verifier/utils"
 	"github.com/consensys/gnark/backend/groth16/bn254/mpcsetup"
 	"github.com/consensys/gnark/constraint"
 	cs "github.com/consensys/gnark/constraint/bn254"
+	"github.com/doubiliu/zk-email/utils"
 )
 
 /**

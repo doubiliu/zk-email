@@ -8,12 +8,12 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/bane-labs/dbft-verifier/algorithm"
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/std/hash/sha2"
 	"github.com/consensys/gnark/std/math/emulated"
 	"github.com/consensys/gnark/std/math/emulated/emparams"
 	"github.com/consensys/gnark/std/math/uints"
+	"github.com/doubiliu/zk-email/algorithm"
 )
 
 type CustomDKIMVerifierWrapper[T emulated.FieldParams] struct {

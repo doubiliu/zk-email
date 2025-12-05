@@ -8,12 +8,12 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/bane-labs/dbft-verifier/algorithm"
 	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/std/math/emulated"
 	"github.com/consensys/gnark/std/math/emulated/emparams"
 	"github.com/consensys/gnark/test"
+	"github.com/doubiliu/zk-email/algorithm"
 )
 
 func TestRSACircuit(t *testing.T) {

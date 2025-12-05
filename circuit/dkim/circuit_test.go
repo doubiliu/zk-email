@@ -12,9 +12,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bane-labs/dbft-verifier/algorithm"
-	"github.com/bane-labs/dbft-verifier/mpc"
-	"github.com/bane-labs/dbft-verifier/utils"
 	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark/backend"
 	"github.com/consensys/gnark/backend/groth16"
@@ -24,6 +21,9 @@ import (
 	"github.com/consensys/gnark/std/math/emulated/emparams"
 	"github.com/consensys/gnark/test"
 	"github.com/containerd/containerd/pkg/hasher"
+	"github.com/doubiliu/zk-email/algorithm"
+	"github.com/doubiliu/zk-email/mpc"
+	"github.com/doubiliu/zk-email/utils"
 )
 
 var GmailTestData = utils.FixupNewlines(`to:Shili Hu <799498265@qq.com>

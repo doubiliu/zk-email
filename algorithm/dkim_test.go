@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/bane-labs/dbft-verifier/utils"
+	"github.com/doubiliu/zk-email/utils"
 )
 
 type fakeDnsClient struct {

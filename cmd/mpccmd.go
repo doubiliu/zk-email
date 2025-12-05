@@ -8,13 +8,11 @@ import (
 	"math"
 	"os"
 
-	"github.com/bane-labs/dbft-verifier/circuit/dkim"
-	"github.com/bane-labs/dbft-verifier/mpc"
 	"github.com/consensys/gnark-crypto/ecc"
-	_ "github.com/consensys/gnark/backend/groth16"
-	_ "github.com/consensys/gnark/constraint"
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/frontend/cs/r1cs"
+	"github.com/doubiliu/zk-email/circuit/dkim"
+	"github.com/doubiliu/zk-email/mpc"
 	"github.com/urfave/cli/v2"
 )
 
