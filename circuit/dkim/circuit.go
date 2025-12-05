@@ -5,46 +5,16 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"errors"
-	"github.com/bane-labs/dbft-verifier/algorithm"
+	"math/big"
+	"strings"
+
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/std/hash/sha2"
 	"github.com/consensys/gnark/std/math/emulated"
 	"github.com/consensys/gnark/std/math/emulated/emparams"
 	"github.com/consensys/gnark/std/math/uints"
-	"math/big"
-	"strings"
+	"github.com/doubiliu/zk-email/algorithm"
 )
-
-func GetCustomDKIMVerifierWrapper(mailType string) (frontend.Circuit, error) {
-	switch mailType {
-	case "gmail":
-		result, err := new(CustomDKIMVerifierWrapper[emparams.Mod1e4096]).Circuit(GmailTemplate, rsaPubkeyTemplate)
-		if err != nil {
-			return nil, err
-		}
-		return result, nil
-	case "outlook":
-		result, err := new(CustomDKIMVerifierWrapper[emparams.Mod1e4096]).Circuit(OutLookTemplate, rsaPubkeyTemplate)
-		if err != nil {
-			return nil, err
-		}
-		return result, nil
-	case "foxmail":
-		result, err := new(CustomDKIMVerifierWrapper[emparams.Mod1e4096]).Circuit(FoxmailTemplate, rsaPubkeyTemplate)
-		if err != nil {
-			return nil, err
-		}
-		return result, nil
-	case "icloud":
-		result, err := new(CustomDKIMVerifierWrapper[emparams.Mod1e4096]).Circuit(ICloudTemplate, rsaPubkeyTemplate)
-		if err != nil {
-			return nil, err
-		}
-		return result, nil
-	default:
-		return nil, errors.New("unknown mail type")
-	}
-}
 
 type CustomDKIMVerifierWrapper[T emulated.FieldParams] struct {
 	PubInputHash []frontend.Variable `gnark:",public"`
@@ -53,9 +23,9 @@ type CustomDKIMVerifierWrapper[T emulated.FieldParams] struct {
 	Signature    EmailSig
 }
 
-// Define declares the circuit's constraints
+// Define declares the circuit's constraints.
 func (c *CustomDKIMVerifierWrapper[T]) Define(api frontend.API) error {
-	//check public input
+	// compute and check with public input hash
 	// pubkey N and E
 	f, err := emulated.NewField[T](api)
 	if err != nil {
@@ -71,13 +41,12 @@ func (c *CustomDKIMVerifierWrapper[T]) Define(api frontend.API) error {
 	if err != nil {
 		return err
 	}
-	pubInput := nBytes
-	pubInput = append(pubInput, eBytes...)
+	pubInput := append(nBytes, eBytes...)
 	pubInput = append(pubInput, c.Signature.BodyHash[:]...)
 	pubInput = append(pubInput, fromHash...)
 	pubInputU8 := make([]uints.U8, len(pubInput))
-	for i, _ := range pubInput {
-		pubInputU8[i] = u8Api.ByteValueOf(pubInput[i])
+	for i, v := range pubInput {
+		pubInputU8[i] = u8Api.ByteValueOf(v)
 	}
 	hasher, err := sha2.New(api)
 	if err != nil {
@@ -88,24 +57,59 @@ func (c *CustomDKIMVerifierWrapper[T]) Define(api frontend.API) error {
 	for i := range c.PubInputHash {
 		api.AssertIsEqual(c.PubInputHash[i], pubInputHash[i].Val)
 	}
-	v := NewDKIMVerifier[T](api)
-	err = v.VerifyCustomEmail(c.Header, c.Signature, *c.PublicKey)
+	return verifyCustomEmail(api, c.Header, c.Signature, *c.PublicKey)
+}
+
+// verifyCustomEmail verifies the DKIM signature within the circuit.
+func verifyCustomEmail[T emulated.FieldParams](api frontend.API, header CustomEmailHeader, sig EmailSig, publicKey PublicKey[T]) error {
+	headerEncode := NewCustomEmailHeaderEncode(api)
+	//bodyEncode := NewEmailBodyEncode(api)
+	sigEncode := NewEmailSigEncode(api)
+	trimmedHeader, err := sigEncode.GetTrimmedHeader(sig)
+	if err != nil {
+		return err
+	}
+	headerHash, err := headerEncode.GetHeaderHash(header, trimmedHeader)
+	if err != nil {
+		return err
+	}
+	rsa := NewRSA[T](api)
+	err = rsa.VerifyPkcs1v15(&publicKey, sig.SigContent, headerHash)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (c *CustomDKIMVerifierWrapper[T]) Circuit(message string, txtRecord string) (frontend.Circuit, error) {
-	return c.instance(message, txtRecord)
-}
-func (c *CustomDKIMVerifierWrapper[T]) Assignment(message string, txtRecord string, templateCircuit CustomDKIMVerifierWrapper[T]) (frontend.Circuit, error) {
-	instance, err := c.instance(message, txtRecord)
+// GetCustomDKIMVerifierWrapper returns a DKIM verifier circuit template for the specified mail type.
+func GetCustomDKIMVerifierWrapper(mailType string) (*CustomDKIMVerifierWrapper[emparams.Mod1e4096], error) {
+	var template string
+	switch mailType {
+	case "gmail":
+		template = GmailTemplate
+	case "outlook":
+		template = OutlookTemplate
+	case "foxmail":
+		template = FoxmailTemplate
+	case "icloud":
+		template = ICloudTemplate
+	default:
+		return nil, errors.New("unknown mail type")
+	}
+	result, err := newCircuit[emparams.Mod1e4096](template, rsaPubkeyTemplate)
 	if err != nil {
 		return nil, err
 	}
-	assignment := instance.(*CustomDKIMVerifierWrapper[T])
-	//padding0
+	return result, nil
+}
+
+// NewAssignment creates a new assignment for the DKIM verifier circuit.
+func NewAssignment[T emulated.FieldParams](message string, txtRecord string, templateCircuit *CustomDKIMVerifierWrapper[T]) (frontend.Circuit, error) {
+	assignment, err := newCircuit[T](message, txtRecord)
+	if err != nil {
+		return nil, err
+	}
+	// Pad 0.
 	prefixDataPaddingLength := len(templateCircuit.Header.PrefixData.Slice) - len(assignment.Header.PrefixData.Slice)
 	specifyDataPaddingLength := len(templateCircuit.Header.SpecifyData.Slice) - len(assignment.Header.SpecifyData.Slice)
 	suffixDataPaddingLength := len(templateCircuit.Header.SuffixData.Slice) - len(assignment.Header.SuffixData.Slice)
@@ -150,16 +154,17 @@ func (c *CustomDKIMVerifierWrapper[T]) Assignment(message string, txtRecord stri
 	return assignment, nil
 }
 
-func (c *CustomDKIMVerifierWrapper[T]) instance(message string, txtRecord string) (frontend.Circuit, error) {
+// newCircuit creates a new DKIM verifier circuit from the email message and DNS TXT record.
+func newCircuit[T emulated.FieldParams](message string, txtRecord string) (*CustomDKIMVerifierWrapper[T], error) {
 	email := algorithm.ParseEmail(message)
 	var signatureHeader string
 	fromHeaderIndex := -1
 	for index, header := range email.Headers() {
-		// we don't support DKIM-Signature headers signing other DKIM-Signature
+		// We don't support DKIM-Signature headers signing other DKIM-Signature.
 		if algorithm.IsFromHeader(header) {
 			fromHeaderIndex = index
 		}
-		// headers
+		// Check and find DKIM-Signature header.
 		if algorithm.IsSignatureHeader(header) {
 			if signatureHeader != "" {
 				return nil, errors.New("multiple DKIM headers")
@@ -175,7 +180,7 @@ func (c *CustomDKIMVerifierWrapper[T]) instance(message string, txtRecord string
 	}
 	signature, err := algorithm.ParseSignature(signatureHeader)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	signatureHeaderNames := make([]string, len(signature.HeaderNames()))
 	for i, name := range signature.HeaderNames() {
@@ -203,13 +208,13 @@ func (c *CustomDKIMVerifierWrapper[T]) instance(message string, txtRecord string
 	for i := range bodyHash {
 		bodyHash[i] = signature.BodyHash()[i]
 	}
-	//dns txt record to RSA pubkey
+	// From DNS txt record to RSA pubkey.
 	key := algorithm.ParsePubkey(txtRecord)
 	pubKey, err := x509.ParsePKIXPublicKey(key.Key())
 	if err != nil {
 		return nil, err
 	}
-	//compute publicInputHash
+	// Compute publicInputHash.
 	nBytes := pubKey.(*rsa.PublicKey).N.FillBytes(make([]byte, 512))
 	eBytes := new(big.Int).SetInt64(int64(pubKey.(*rsa.PublicKey).E)).FillBytes(make([]byte, 512))
 	fromHash := GetHash(specifyData)

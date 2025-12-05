@@ -5,8 +5,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/bane-labs/dbft-verifier/utils"
 	"github.com/consensys/gnark/backend/groth16/bn254/mpcsetup"
+	"github.com/doubiliu/zk-email/utils"
 )
 
 /**
@@ -22,18 +22,9 @@ func InitPhase1(path string, power uint64) (phase1 mpcsetup.Phase1, err error) {
 	if err := os.MkdirAll(dir, os.ModePerm); err != nil {
 		return mpcsetup.Phase1{}, fmt.Errorf("failed to create directory %s: %w", dir, err)
 	}
-	file, err := os.Create(path)
-	if err != nil {
-		return mpcsetup.Phase1{}, fmt.Errorf("failed to create file %s: %w", path, err)
-	}
 	phase1.Initialize(power)
-	_, err = phase1.WriteTo(file)
-	if err != nil {
-		return phase1, err
-	}
-	err = file.Close()
-	if err != nil {
-		return phase1, err
+	if err = utils.WriteToFile(&phase1, path); err != nil {
+		return mpcsetup.Phase1{}, nil
 	}
 	return phase1, nil
 }
@@ -121,6 +112,12 @@ func ReadPhase1FromFile(path string) (mpcsetup.Phase1, error) {
 	return phase1, err
 }
 
+/**
+ * Function: ReadSrsCommonsFromFile
+ * @Description: get srs common data from file
+ * @param path: file path
+ * @return srs: srs common data
+ */
 func ReadSrsCommonsFromFile(path string) (mpcsetup.SrsCommons, error) {
 	var srs mpcsetup.SrsCommons
 	f, err := os.Open(path)

@@ -2,6 +2,7 @@ package dkim
 
 import (
 	"errors"
+
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/std/math/emulated"
 )
@@ -11,7 +12,7 @@ func NewRSA[T emulated.FieldParams](api frontend.API) RSA[T] {
 }
 
 type PublicKey[T emulated.FieldParams] struct {
-	N emulated.Element[T] // modulus
+	N emulated.Element[T] // Modulus
 	E emulated.Element[T]
 }
 
@@ -29,7 +30,7 @@ func (rsa *RSA[T]) VerifyPkcs1v15(pubKey *PublicKey[T], sign, hashed []frontend.
 		return err
 	}
 	if len(em) < len(expected) {
-		// Impossible case, otherwise the pub.N has an overflow when input
+		// Impossible case, otherwise the pub.N has an overflow when input.
 		return errors.New("em overflow")
 	}
 	for i := 0; i < len(expected); i++ {
@@ -43,10 +44,10 @@ func (rsa *RSA[T]) encrypt(pub *PublicKey[T], sign []frontend.Variable) ([]front
 	if err != nil {
 		return nil, err
 	}
-	// Ensure the bitlength of pub.N is not larger than sign, here checks the value directly
+	// Ensure the bitlength of pub.N is not larger than sign, here checks the value directly.
 	p := f.FromBits(BytesToBits(rsa.api, sign)...)
 	f.AssertIsLessOrEqual(p, &pub.N)
-	// Compute p = sign^e mod n
+	// Compute p = sign^e mod n.
 	em := f.ToBits(f.ModExp(p, &pub.E, &pub.N))
 	return em, nil
 }

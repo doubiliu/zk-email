@@ -29,7 +29,7 @@ func (c *EmailBodyEncodeWrapper) Define(api frontend.API) error {
 
 func TestEmailBodyEncode(t *testing.T) {
 	assert := test.NewAssert(t)
-	//The email text will be split into multiple paragraphs to facilitate more flexible verification.
+	// Email text will be split into multiple paragraphs to facilitate more flexible verification.
 	textPrex := "This is the first paragraph of the email body,"
 	textSuffix := "This is the last paragraph of the email body"
 	text := "special content"

@@ -1,4 +1,4 @@
-module github.com/bane-labs/dbft-verifier
+module github.com/doubiliu/zk-email
 
 go 1.23.1
 

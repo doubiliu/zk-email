@@ -5,8 +5,15 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
+/**
+ * Function: WriteToFile
+ * @Description: write io.WriterTo item to file
+ * @param item: io.WriterTo item
+ * @param path: file path
+ */
 func WriteToFile(item io.WriterTo, path string) error {
 	dir := filepath.Dir(path)
 	if err := os.MkdirAll(dir, os.ModePerm); err != nil {
@@ -21,4 +28,14 @@ func WriteToFile(item io.WriterTo, path string) error {
 		return err
 	}
 	return file.Close()
+}
+
+/*
+ * Function: FixupNewlines
+ * @Description: convert LF newlines to CRLF newlines
+ * @param s: input string
+ * @return: string with CRLF newlines
+ */
+func FixupNewlines(s string) string {
+	return strings.Replace(s, "\n", "\r\n", -1)
 }

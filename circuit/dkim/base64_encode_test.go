@@ -68,7 +68,7 @@ type Base64EncodeWrapper struct {
 	Aim3  []frontend.Variable
 }
 
-// Define declares the circuit's constraints
+// Define declares the circuit's constraints.
 func (c *Base64EncodeWrapper) Define(api frontend.API) error {
 	encode := NewBase64Encode(api)
 	encodeData1 := encode.EncodeRule1(c.Data1)

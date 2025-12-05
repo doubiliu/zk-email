@@ -4,6 +4,8 @@ import (
 	"errors"
 	"strings"
 	"testing"
+
+	"github.com/doubiliu/zk-email/utils"
 )
 
 type fakeDnsClient struct {
@@ -26,11 +28,7 @@ var client = &fakeDnsClient{
 	},
 }
 
-func fixupNewlines(s string) string {
-	return strings.Replace(s, "\n", "\r\n", -1)
-}
-
-var complete = fixupNewlines(`Received: by igcau2 with SMTP id au2so61978408igc.0
+var complete = utils.FixupNewlines(`Received: by igcau2 with SMTP id au2so61978408igc.0
         for <1v443yp1p8@keytree.io>; Sun, 29 Mar 2015 19:39:21 -0700 (PDT)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=vandenhooff.name; s=google;
@@ -75,7 +73,7 @@ Content-Type: text/plain; charset=UTF-8
 
 `)
 
-var justSignature = fixupNewlines(`DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+var justSignature = utils.FixupNewlines(`DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=vandenhooff.name; s=google;
         h=mime-version:from:date:message-id:subject:to:content-type;
         bh=47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=;
@@ -131,7 +129,7 @@ func TestComplete(t *testing.T) {
 	}
 }
 
-var headersOnly = fixupNewlines(`mime-version:1.0
+var headersOnly = utils.FixupNewlines(`mime-version:1.0
 from:Jelle van den Hooff <jelle@vandenhooff.name>
 date:Sun, 29 Mar 2015 22:39:03 -0400
 message-id:<CAP=Jqubpoizbfg+Fb_+ycEkhqrgMBE=qozKrRubUuimQ717wKw@mail.gmail.com>

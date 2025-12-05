@@ -13,7 +13,6 @@ import (
 	"github.com/consensys/gnark/backend/groth16"
 	groth16_bn254 "github.com/consensys/gnark/backend/groth16/bn254"
 	"github.com/consensys/gnark/backend/groth16/bn254/mpcsetup"
-	"github.com/consensys/gnark/backend/solidity"
 	"github.com/consensys/gnark/backend/witness"
 	"github.com/consensys/gnark/constraint"
 	cs "github.com/consensys/gnark/constraint/bn254"
@@ -187,22 +186,6 @@ func ExportCCS(ccs constraint.ConstraintSystem, path string) error {
 }
 
 /**
- * Function: ExportContract
- * @Description: export solidity file
- * @param vk: verifying key
- */
-func ExportGroth16Contract(vk groth16.VerifyingKey, path string) {
-	contract, err := os.Create(path)
-	if err != nil {
-		panic(err)
-	}
-	err = vk.ExportSolidity(contract, solidity.WithHashToFieldFunction(sha256.New()))
-	if err != nil {
-		panic(err)
-	}
-}
-
-/**
  * Function: GetHash
  * @Description: get data hash
  * @param data: data
@@ -213,6 +196,12 @@ func GetHash(data []byte) []byte {
 	return hash[:]
 }
 
+/**
+ * Function: ReadFile
+ * @Description: read file content
+ * @param path: file path
+ * @return string: file content
+ */
 func ReadFile(path string) (string, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -222,12 +211,89 @@ func ReadFile(path string) (string, error) {
 }
 
 /**
+ * Function: TrustedLocalSetup
+ * @Description: local trusted setup for groth16
+ * @param ct: circuit
+ * @param assignment: input data collection
+ * @return ccs: circuit constraints
+ * @return pk: proving key
+ * @return vk: verification key
+ */
+func TrustedLocalSetup(ct frontend.Circuit, assignment frontend.Circuit) (constraint.ConstraintSystem, groth16.ProvingKey, groth16.VerifyingKey, error) {
+	ccs, err := frontend.Compile(ecc.BN254.ScalarField(), r1cs.NewBuilder, ct)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	fmt.Println(ccs.GetNbConstraints())
+	pk, vk, err := groth16.Setup(ccs)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	err = ProveCircuit(ccs, pk, vk, assignment)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	return ccs, pk, vk, nil
+}
+
+/**
+ * Function: ProveCircuit
+ * @Description: generate verifiable zk proof
+ * @param css: circuit constraints
+ * @param pk: proving key
+ * @param vk: verification key
+ * @param assignment: input data collection
+ */
+func ProveCircuit(ccs constraint.ConstraintSystem, pk groth16.ProvingKey, vk groth16.VerifyingKey, assignment frontend.Circuit) error {
+	witness, err := frontend.NewWitness(assignment, ecc.BN254.ScalarField())
+	if err != nil {
+		return err
+	}
+	start := time.Now()
+	proof, err := groth16.Prove(ccs, pk, witness, backend.WithProverHashToFieldFunction(sha256.New()))
+	if err != nil {
+		return err
+	}
+	fmt.Println("Prove Time: ", time.Since(start))
+	publicWitness, err := witness.Public()
+	if err != nil {
+		return err
+	}
+	err = groth16.Verify(proof, vk, publicWitness, backend.WithVerifierHashToFieldFunction(sha256.New()))
+	if err != nil {
+		return err
+	}
+	proofData, cmts, cmtPok, err := GetContractInput(proof)
+	if err != nil {
+		return err
+	}
+	// proof.Ar, proof.Bs, proof.Krs
+	fmt.Println("Proof:")
+	for i := 0; i < 8; i++ {
+		fmt.Println(proofData[i].String())
+	}
+	fmt.Println()
+	// commitments
+	fmt.Println("Commitments:")
+	for i := 0; i < len(cmts); i++ {
+		fmt.Println(cmts[i].String())
+	}
+	fmt.Println()
+	// commitmentPok
+	fmt.Println("CommitmentPok:")
+	for i := 0; i < len(cmtPok); i++ {
+		fmt.Println(cmtPok[i].String())
+	}
+	return nil
+}
+
+/**
  * Function: GetContractInput
  * @Description: get the data submitted to the chain
  * @param proof: zk proof
  * @return []*big.Int: data submitted to the chain
  */
-func GetGroth16ContractInput(proof groth16.Proof) ([8]*big.Int, []*big.Int, [2]*big.Int, error) {
+func GetContractInput(proof groth16.Proof) ([8]*big.Int, []*big.Int, [2]*big.Int, error) {
 	// Solidity contract inputs
 	proofInBn254, ok := proof.(*groth16_bn254.Proof)
 	if !ok {
@@ -254,66 +320,11 @@ func GetGroth16ContractInput(proof groth16.Proof) ([8]*big.Int, []*big.Int, [2]*
 	return prf, cmts, cmtPok, nil
 }
 
-func TrustedLocalSetup(ct frontend.Circuit, assignment frontend.Circuit) (constraint.ConstraintSystem, groth16.ProvingKey, groth16.VerifyingKey, error) {
-	ccs, err := frontend.Compile(ecc.BN254.ScalarField(), r1cs.NewBuilder, ct)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-	fmt.Println(ccs.GetNbConstraints())
-	pk, vk, err := groth16.Setup(ccs)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-	err = ProveCircuit(ccs, pk, vk, assignment)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-	return ccs, pk, vk, nil
-}
-
-func ProveCircuit(ccs constraint.ConstraintSystem, pk groth16.ProvingKey, vk groth16.VerifyingKey, assignment frontend.Circuit) error {
-	witness, err := frontend.NewWitness(assignment, ecc.BN254.ScalarField())
-	if err != nil {
-		return err
-	}
-	start := time.Now()
-	proof, err := groth16.Prove(ccs, pk, witness, backend.WithProverHashToFieldFunction(sha256.New()))
-	if err != nil {
-		return err
-	}
-	fmt.Println("Prove Time: ", time.Since(start))
-	publicWitness, err := witness.Public()
-	if err != nil {
-		return err
-	}
-	err = groth16.Verify(proof, vk, publicWitness, backend.WithVerifierHashToFieldFunction(sha256.New()))
-	if err != nil {
-		return err
-	}
-	proofData, cmts, cmtPok, err := GetGroth16ContractInput(proof)
-	if err != nil {
-		return err
-	}
-	// proof.Ar, proof.Bs, proof.Krs
-	fmt.Printf("Proof:")
-	for i := 0; i < 8; i++ {
-		fmt.Printf(proofData[i].String())
-	}
-	fmt.Println()
-	// commitments
-	fmt.Printf("Commitments:")
-	for i := 0; i < len(cmts); i++ {
-		fmt.Printf(cmts[i].String())
-	}
-	fmt.Println()
-	// commitmentPok
-	fmt.Printf("CommitmentPok:")
-	for i := 0; i < len(cmtPok); i++ {
-		fmt.Printf(cmtPok[i].String())
-	}
-	return nil
-}
-
+/**
+ * Function: ExportContract
+ * @Description: export solidity contract file
+ * @param vk: verifying key
+ */
 func ExportContract(vk groth16.VerifyingKey, path string) error {
 	contract, err := os.Create(path)
 	if err != nil {

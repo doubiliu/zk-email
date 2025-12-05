@@ -6,14 +6,16 @@ import (
 	"github.com/consensys/gnark/frontend"
 )
 
-// given an array "a", we try to get its slice a[:len] (suffix can be transformed into prefix by reversing a)
-// since len is not determined, so the circuit will change when len is changed
+// Given an array "a", we try to get its slice a[:len] (suffix can be transformed into prefix by reversing a).
+// Since len is not determined, the circuit will change when len is changed.
 
 type UndeterminedSlice struct {
 	Variables  []frontend.Variable
 	IsSelected frontend.Variable // bool
 }
+
 type DeterminedSlice = []frontend.Variable
+
 type SliceComposer struct {
 	api frontend.API
 }
@@ -22,20 +24,19 @@ func NewSliceComposer(api frontend.API) SliceComposer {
 	return SliceComposer{api: api}
 }
 
-// Process compute a fn(slices...)
-// each generator generates all the possible slice(UndeterminedSlice), where isSelect = 1(only one) is the slice we want
+// Process compute a fn(slices...).
+// each generator generates all the possible slice(UndeterminedSlice), where isSelect = 1(only one) is the slice we want.
 func (c *SliceComposer) Process(determinedLen int, fn func(frontend.API, ...UndeterminedSlice) (DeterminedSlice, error), generators ...func(api frontend.API) []UndeterminedSlice) (DeterminedSlice, error) {
 	if len(generators) == 0 {
 		return nil, errors.New("no generator function provided")
 	}
-	api := c.api
 	result := make(DeterminedSlice, determinedLen)
 	for i := 0; i < determinedLen; i++ {
 		result[i] = frontend.Variable(0)
 	}
 	params := make([][]UndeterminedSlice, len(generators))
 	for i := 0; i < len(generators); i++ {
-		params[i] = generators[i](api)
+		params[i] = generators[i](c.api)
 	}
 	testIndex := 0
 
@@ -43,7 +44,7 @@ func (c *SliceComposer) Process(determinedLen int, fn func(frontend.API, ...Unde
 	dfs = func(i int, slices []UndeterminedSlice) error {
 		if i == len(generators) {
 			testIndex++
-			tmp, err := fn(api, slices...)
+			tmp, err := fn(c.api, slices...)
 			if err != nil {
 				return err
 			}
@@ -54,10 +55,10 @@ func (c *SliceComposer) Process(determinedLen int, fn func(frontend.API, ...Unde
 			for _, slice := range slices {
 				//api.Println(param.IsSelected)
 				//api.Println(param.Variables...)
-				selector = api.Mul(selector, slice.IsSelected)
+				selector = c.api.Mul(selector, slice.IsSelected)
 			}
 			for j := 0; j < len(result); j++ {
-				result[j] = api.Add(result[j], api.Mul(selector, tmp[j]))
+				result[j] = c.api.Add(result[j], c.api.Mul(selector, tmp[j]))
 			}
 			return nil
 		}
