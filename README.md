@@ -25,5 +25,11 @@ Export contract:
 
 ## Calculate a zk-proof
 `go run mpccmd.go proof --pk <filepath> --vk <filepath> --mailType <type> --ccs <filepath> --rsaPuKey <filepath> --dkimData <filepath> `,This command can be used to calculate the zkp certificate of zk-email. 
-The user needs to write the DKIM signature and DKIM public key of the email into the specified file. The DKIM signature can be verified for correctness through the following website(https://www.appmaildev.com/site/testfile/dkim?lang=en),
-and the relevant fields can be obtained. In addition, you can combine the template format in the 'template.go' file to obtain the final signature text.
+
+## Use Case
+1) The user uses his registered email address to send any email to his other email addresses and obtains the source file of the email (which needs to contain a DKIM signature)
+2) The user constructs a new string according to the template corresponding to the email service provider in the 'template.go' file and replaces its relevant fields and DKIM signature.
+3) The user sends the string to the following website (https://www.appmaildev.com/site/testfile/dkim?lang=en) to verify whether the data format is normal. If the DKIM detection item is displayed (or DKIM-Result: fail (signature verified) appears), it means the verification is passed.
+4) The user writes the verified string into a separate txt file
+5) The user uses the 'dig TXT selector.domainkey.domain' command to query the DKIM public key, and the query results are written into a separate text file
+6) The user uses the proof command to calculate the final proof, and the proof is sent to the chain.
