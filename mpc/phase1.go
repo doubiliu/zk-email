@@ -22,18 +22,9 @@ func InitPhase1(path string, power uint64) (phase1 mpcsetup.Phase1, err error) {
 	if err := os.MkdirAll(dir, os.ModePerm); err != nil {
 		return mpcsetup.Phase1{}, fmt.Errorf("failed to create directory %s: %w", dir, err)
 	}
-	file, err := os.Create(path)
-	if err != nil {
-		return mpcsetup.Phase1{}, fmt.Errorf("failed to create file %s: %w", path, err)
-	}
 	phase1.Initialize(power)
-	_, err = phase1.WriteTo(file)
-	if err != nil {
-		return phase1, err
-	}
-	err = file.Close()
-	if err != nil {
-		return phase1, err
+	if err = utils.WriteToFile(&phase1, path); err != nil {
+		return mpcsetup.Phase1{}, nil
 	}
 	return phase1, nil
 }
